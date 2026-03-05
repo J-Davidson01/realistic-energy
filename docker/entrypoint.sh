@@ -41,9 +41,9 @@ fi
 echo "[entrypoint] Installing Python dependencies..."
 find benchmarks -type f -name requirements.txt 2>/dev/null | while read -r req; do
   echo "  pip3 install -r $req"
-  pip3 install -r "$req"
+  pip3 install --break-system-packages -r "$req"
 done
-[[ -f scripts/requirements.txt ]] && pip3 install -r scripts/requirements.txt
+[[ -f scripts/requirements.txt ]] && pip3 install --break-system-packages -r scripts/requirements.txt
 
 # -----------------------------
 # 3) Instantiate Julia envs
