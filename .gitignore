@@ -2,6 +2,30 @@
 /datasets/
 /results/
 
+# Generated benchmark datasets
+datasets/*
+!datasets/.gitkeep
+
+# Benchmark results
+results/
+
+# CMake build directories inside benchmarks
+**/build/
+
+# CMake internal files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+
+# Generated executables
+sha256_c
+sha256_go
+
+# Docker temporary files
+*.tar
+*.tar.gz
+
 # Optional: ignore all large generated files anywhere
 # *.csv
 # *.json

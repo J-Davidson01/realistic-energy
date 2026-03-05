@@ -43,12 +43,12 @@ def main():
     parser.add_argument("--min-size", type=int, default=64, help="Minimum size of the buffer (in bytes)")
     parser.add_argument("--max-size", type=int, default=1024*1024*512, help="Maximum size of the buffer (in bytes)")
     parser.add_argument("--seed", type=int, default=12345, help="Seed for random number generation")
-    parser.add_argument("--benchmark", type=str, default="sha256", help="Name of the benchmark (used as subdirectory), comma seperated, e.g. sha256,json_parse,file_copy,pipeline")
+    parser.add_argument("--benchmarks", type=str, default="sha256", help="Name of the benchmark(s) (used as subdirectory), comma seperated, e.g. sha256,json_parse,file_copy,pipeline")
     parser.add_argument("--out-root", type=str, default="datasets", help="Root directory for generated inputs")
     
     args = parser.parse_args()
     
-    benchmarks = [b.strip() for b in args.benchmark.split(",") if b.strip()]
+    benchmarks = [b.strip() for b in args.benchmarks.split(",") if b.strip()]
     if not benchmarks:
         print("No benchmarks specified. Exiting.")
         return
