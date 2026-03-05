@@ -1,14 +1,17 @@
 #include "sha256.h"
-#include <openssl/sha.h>
+#include <openssl/evp.h>
 #include <openssl/hmac.h>
 
 volatile unsigned char sink; // Volatile variable to prevent compiler optimizations
 
-void workload_sha256(unsigned char *buffer, size_t buffer_len, 
-    unsigned char *key_hmac, size_t key_hmac_len, 
-    unsigned char *key_xor, size_t key_xor_len, 
-    unsigned char* ciphertext, unsigned char *decrypted, 
-    unsigned char out_hmac[32]) {
+void workload_sha256(
+    const unsigned char *buffer, size_t buffer_len,
+    const unsigned char *key_hmac, size_t key_hmac_len,
+    const unsigned char *key_xor,  size_t key_xor_len,
+    unsigned char *ciphertext,
+    unsigned char *decrypted,
+    unsigned char out_hmac[32]
+) {
     //XOR Encrypt
     for (size_t i = 0; i < buffer_len; i++) {
         ciphertext[i] = buffer[i] ^ key_xor[i % key_xor_len];
@@ -23,8 +26,10 @@ void workload_sha256(unsigned char *buffer, size_t buffer_len,
         decrypted[i] = ciphertext[i] ^ key_xor[i % key_xor_len];
     }
 
+    // Discard output (use the results in a way that prevents optimization and introduces barely any overhead)
     sink ^= out_hmac[0]; //We use ^= to prevent the compiler from optimizing away the HMAC computation, when using = some aggresive optimization cases might simplify or partially eliminate work because intermediate values are irrelevant.
     sink ^= decrypted[0]; //Again we use ^= to prevent the compiler from optimizing away the decryption step
+    
 }
 
 

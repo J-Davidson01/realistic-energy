@@ -1,3 +1,5 @@
+#pragma once
+#include <stddef.h>
 
 void workload_sha256(
     const unsigned char *buffer, size_t buffer_len,

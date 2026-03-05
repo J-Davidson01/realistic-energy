@@ -41,7 +41,7 @@ def main():
     parser = argparse.ArgumentParser(description="Generate input files for the benchmarks")
     parser.add_argument("--base-dir", type=Path, default=Path("inputs"), help="Base directory for generated inputs")
     parser.add_argument("--min-size", type=int, default=64, help="Minimum size of the buffer (in bytes)")
-    parser.add_argument("--max-size", type=int, default=1024*1024, help="Maximum size of the buffer (in bytes)")
+    parser.add_argument("--max-size", type=int, default=1024*1024*512, help="Maximum size of the buffer (in bytes)")
     parser.add_argument("--seed", type=int, default=12345, help="Seed for random number generation")
     parser.add_argument("--benchmark", type=str, default="sha256", help="Name of the benchmark (used as subdirectory), comma seperated, e.g. sha256,json_parse,file_copy,pipeline")
     parser.add_argument("--out-root", type=str, default="datasets", help="Root directory for generated inputs")

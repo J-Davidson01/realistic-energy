@@ -1,5 +1,7 @@
 #include "sha256.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 static unsigned char* read_file(const char* path, size_t *out_len) {
     FILE *file = fopen(path, "rb");
@@ -62,20 +64,20 @@ static unsigned char* read_file(const char* path, size_t *out_len) {
     }
 
     int main(int argc, char **argv) {
-        const char *dataset_dir = parse_str(argc, argv, "--dataset", "datasets/sha256/4096"); //default dataset
+        const char *dataset_dir = parse_str(argc, argv, "--dataset", "../../../datasets/sha256/4096"); //default dataset
         size_t iterations = parse_u64(argc, argv, "--iterations", 1000000); //default iterations
 
         char input_path[512];
 
-        snprintf(input_path, sizeof(input_path), "%s/input.bin", dataset_dir);
+        snprintf(input_path, sizeof(input_path), "%s/buffer.bin", dataset_dir);
         size_t buffer_len = 0;
         unsigned char *buffer = read_file(input_path, &buffer_len);
 
-        sprintf(input_path, sizeof(input_path), "%s/key_hmac.bin", dataset_dir);
+        snprintf(input_path, sizeof(input_path), "%s/key_hmac.bin", dataset_dir);
         size_t key_hmac_len = 0;
         unsigned char *key_hmac = read_file(input_path, &key_hmac_len);
 
-        sprintf(input_path, sizeof(input_path), "%s/key_xor.bin", dataset_dir);
+        snprintf(input_path, sizeof(input_path), "%s/key_xor.bin", dataset_dir);
         size_t key_xor_len = 0;
         unsigned char *key_xor = read_file(input_path, &key_xor_len);
 
