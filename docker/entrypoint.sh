@@ -51,8 +51,8 @@ done
 echo "[entrypoint] Instantiating Julia environments..."
 find benchmarks -type f -name Project.toml 2>/dev/null | while read -r proj; do
   dir="$(dirname "$proj")"
-  echo "  julia --project=$dir -e 'Pkg.instantiate()'"
-  julia --project="$dir" -e 'using Pkg; Pkg.instantiate()'
+  echo "  julia --project=$dir -e 'Pkg.resolve(); Pkg.instantiate()'"
+  julia --project="$dir" -e 'using Pkg; Pkg.resolve(); Pkg.instantiate()'
 done
 
 # -----------------------------

@@ -69,9 +69,9 @@ func main() {
 
 		fmt.Printf("HMAC: %x\n", hex.EncodeToString(outHmac))
 		if ok {
-			fmt.Println("\nVerification: SUCCESS")
+			fmt.Println("verify= 1")
 		} else {
-			fmt.Println("\nVerification: FAILURE")
+			fmt.Println("verify= 0")
 		}
 		return
 	}
