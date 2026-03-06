@@ -1,7 +1,2 @@
-name = "SHA256Benchmark"
-uuid = "11111111-2222-3333-4444-555555555555"
-authors = ["Jonathan Davidson"]
-version = "0.1.0"
-
 [deps]
 SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"

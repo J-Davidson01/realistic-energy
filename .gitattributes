@@ -1,0 +1,9 @@
+# Shell scripts must use LF
+*.sh text eol=lf
+
+# Docker related files
+Dockerfile* text eol=lf
+docker/*.sh text eol=lf
+
+# Python scripts
+*.py text eol=lf
