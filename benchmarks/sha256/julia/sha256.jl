@@ -1,4 +1,35 @@
+using SHA
 
+const sink = Ref{UInt8}(0)
+
+function workload_sha256(buffer:Vector{UInt8}, key_hmac::Vector{UInt8}, 
+    key_xor::Vector{UInt8}, ciphertext::Vector{Uint8},
+    decrypted::Vector{Uint8}, out_hmac::Vector{Uint8})
+    
+    # 1. XOR Encrypt
+    n = length(buffer)
+    kx = length(key_xor)
+
+    @inbounds for i in 1:n    #we use inbounds to avoid bounds checking for performance, to match C's implementation
+        ciphertext[i] = buffer[i] ⊻ key_xor[mod1(i, kx)]
+    end
+
+    # 2. Compute HMAC-SHA256
+    h = hmac_sha256(key_hmac, ciphertext)
+
+    @inbounds for i in 1:32
+        out_hmac[i] = h[i]
+    end
+
+    # 3. XOR Decrypt
+    @inbounds for i in 1:n
+        decrypted[i] = ciphertext[i] ⊻ key_xor[((i - 1) % kx) + 1]
+    end
+
+    # Prevent compiler optimization
+    sink[] ⊻= out_hmac[1]
+    sink[] ⊻= decrypted[1]    
+return nothing
 
 
 
