@@ -114,7 +114,7 @@
             int verification = (buffer_len == 0) || (memcmp(buffer, decrypted, buffer_len) == 0);
             printf("HMAC: ");
             print_hex(out_hmac, 32);
-            printf("\nVerification: %s\n", verification ? "SUCCESS" : "FAILURE");
+            printf("\verify= %s\n", verification ? "1" : "0");
             
             goto cleanup;
         }
