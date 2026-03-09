@@ -1,7 +1,7 @@
 include("sha256_workload.jl")
 
 function parse_args(args)
-    dataset = "../../../datasets/sha256/4096"
+    dataset = "../../../datasets/sha256/1048576"
     iterations = 100000
     verify = false
 

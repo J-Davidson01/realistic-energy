@@ -43,7 +43,7 @@ func read(path string) []byte {
 }
 
 func main() {
-	dataset := flag.String("dataset", "../../../datasets/sha256/4096", "Path to the dataset directory")
+	dataset := flag.String("dataset", "../../../datasets/sha256/1048576", "Path to the dataset directory")
 	iterations := flag.Int("iterations", 1000000, "Number of iterations to run the workload")
 	verify := flag.Bool("verify", false, "Whether to verify the output of the workload")
 	flag.Parse()
