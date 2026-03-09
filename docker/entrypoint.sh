@@ -79,16 +79,16 @@ echo "[entrypoint] Building Go workloads..."
 find benchmarks -type f -name go.mod 2>/dev/null | while read -r gomod; do
   dir="$(dirname "$gomod")"
   if [[ "$REBUILD" == "1" ]]; then
-    (cd "$dir" && go build ./...)
+    (cd "$dir" && go build -o sha256_go .)
   else
     # just build anyway; go build is usually quick
-    (cd "$dir" && go build ./...)
+    (cd "$dir" && go build -o sha256_go .)
   fi
 done
 
 echo "[entrypoint] Setup complete."
 
 # -----------------------------
-# 6) Run command (default: run_benchmarks.py)
+# 6) Run command (default: run_benchmarks.py) including any args passed to the container
 # -----------------------------
-exec "$@"
+exec python3 scripts/run_benchmarks.py "$@"
