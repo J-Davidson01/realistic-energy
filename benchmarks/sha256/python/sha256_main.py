@@ -36,7 +36,7 @@ def verify(buffer: bytes, key_hmac: bytes, key_xor:bytes, ciphertext: bytearray,
 
 def main() -> None:
     parser = argparse.Argumentparser()
-    parser.add_argument("--dataset", default="../../../datasets/sha256/4096")
+    parser.add_argument("--dataset", default="../../../datasets/sha256/1048576")
     parser.add_argument("--iterations", type=int, default=100000)
     parser.add_argument("--verify", default=False)
     args = parser.parse_args()

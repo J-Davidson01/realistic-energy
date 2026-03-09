@@ -78,7 +78,7 @@
     }
 
     int main(int argc, char **argv) {
-        const char *dataset_dir = parse_str(argc, argv, "--dataset", "../../../datasets/sha256/4096"); //default dataset
+        const char *dataset_dir = parse_str(argc, argv, "--dataset", "../../../datasets/sha256/1048576"); //default dataset
         size_t iterations = parse_u64(argc, argv, "--iterations", 1000000); //default iterations
 
         char input_path[512];
