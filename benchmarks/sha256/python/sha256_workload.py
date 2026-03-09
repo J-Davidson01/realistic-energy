@@ -1,8 +1,29 @@
+#!/usr/bin/env python3
+import hashlib
+import hmac
 
 
+sink = 0
 
+def workload_sha256(buffer: bytes, key_hmac: bytes, 
+                    key_xor: bytes, ciphertext: bytearray, 
+                    decrypted: bytearray, out_hmac: bytearray) -> None:
+    global sink
 
+    key_xor_len = len(key_xor)
 
+    for i in range(len(buffer)):  #we can use len(buffer) as python objects store their length
+        ciphertext[i] = buffer[i] ^ key_xor[i % key_xor_len]
+
+    hmac_value = hmac.new(key_hmac, ciphertext, hashlib.sha256).digest()
+
+    out_hmac[:] = hmac_value
+
+    for i in range(len(ciphertext)):
+        decrypted[i] = ciphertext[i] ^ key_xor[i % key_xor_len]
+
+    sink ^= out_hmac[0]  # Although Python does not optimize code away, we still implement the sink to make all languages idiomatic.
+    sink ^= decrypted[0]
 
 
 # // function WORKLOAD_SHA256(buffer, key_hmac, key_xor):
