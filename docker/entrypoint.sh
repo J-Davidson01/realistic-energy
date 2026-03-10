@@ -91,4 +91,5 @@ echo "[entrypoint] Setup complete."
 # -----------------------------
 # 6) Run command (default: run_benchmarks.py) including any args passed to the container
 # -----------------------------
-exec python3 scripts/run_benchmarks.py "$@"
+#exec python3 scripts/run_benchmarks.py "$@" #buffered outputs
+exec python3 -u scripts/run_benchmarks.py "$@"
