@@ -12,6 +12,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
+from datetime import datetime
 
 import psutil
 
@@ -30,7 +31,7 @@ LANGUAGE_COMMANDS = {
         "--iterations", "{iterations}"
     ],
     "go": [
-        "go", "run", str(BENCHMARKS_ROOT / "sha256" / "go" / "sha256_go"),
+        str(BENCHMARKS_ROOT / "sha256" / "go" / "sha256_go"),
         "--dataset", "{dataset}",
         "--iterations", "{iterations}"
     ],
@@ -222,7 +223,12 @@ def run_verify(language: str, dataset: Path) -> bool:
     template = LANGUAGE_COMMANDS[language]
     cmd = format_command(template, dataset, iterations=1, verify=True)
     completed = run_command_capture(cmd)
-    return completed.returncode == 0
+    if completed.returncode != 0:
+        print(f"[verify:{language}] stdout:\n{completed.stdout}")
+        print(f"[verify:{language}] stderr:\n{completed.stderr}")
+        return False
+
+    return True
 
 def run_benchmark(
     language: str,
@@ -241,9 +247,6 @@ def run_benchmark(
 
     start_snapshot = snapshot_rapl(rapl_zones) if rapl_zones else {}
     t0 = time.perf_counter()
-
-    print("COMMAND:", command)
-    print("COMMAND TYPE:", type(command))
 
     proc = subprocess.Popen(
         command,
@@ -308,6 +311,20 @@ def append_csv_row(csv_path: Path, row: Dict[str, object]) -> None:
         writer.writerow(row)
 
 #======
+# Helpers
+
+def make_timestamped_results_path(path: Path) -> Path:
+    """Return a new path with the current date/time appended to the filename.
+
+    This helps avoid overwriting previous runs when the script is executed multiple times.
+    """
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    if path.suffix:
+        return path.with_name(f"{path.stem}_{timestamp}{path.suffix}")
+    return Path(f"{path}_{timestamp}")
+
+#======
 # Main
 
 def main() -> None:
@@ -323,7 +340,7 @@ def main() -> None:
 
     benchmark = args.benchmark
     datasets_root = Path(args.datasets_root)
-    csv_path = Path(args.results_dir)
+    csv_path = make_timestamped_results_path(Path(args.results_dir))
     memory_interval_s = args.memory_interval_ms / 1000.0
     languages = [l.strip() for l in args.languages.split(",") if l.strip()]
     unknown = [lang for lang in languages if lang not in LANGUAGE_COMMANDS]
