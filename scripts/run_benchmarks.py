@@ -281,12 +281,12 @@ def run_benchmark(
         "language": language,
         "size": size,
         "iterations": iterations,
-        "elapsed_time_s": elapsed_time_s,
-        "energy_j": energy_j,
-        "memory_rss_start": mem_stats.rss_start,
-        "memory_rss_peak": mem_stats.rss_peak,
-        "memory_rss_end": mem_stats.rss_end,
-        "memory_samples": mem_stats.samples,
+        "elapsed_s": elapsed_time_s,
+        "energy_pkg_j": energy_j,
+        "rss_start_bytes": mem_stats.rss_start,
+        "rss_peak_bytes": mem_stats.rss_peak,
+        "rss_end_bytes": mem_stats.rss_end,
+        "rss_samples": mem_stats.samples,
         "returncode": proc.returncode,
         "stdout": (stdout or "").strip(),
         "stderr": (stderr or "").strip(),
@@ -359,11 +359,18 @@ def main() -> None:
                                 rapl_zones=rapl_zones)
             append_csv_row(csv_path, row)
             status = "success" if row["returncode"] == 0 else f"failed (return code {row['returncode']})"
+
+            energy_str = (
+                f"energy={row['energy_pkg_j']:.6f}J "
+                if row["energy_pkg_j"] is not None
+                else ""
+            )
+
             print(
                 f" -> {status} "
-                f"time={row['elapsed_time_s']:.6f}s "
-                f"energy={row['energy_j']:.6f}J " if row["energy_j"] is not None else ""
-                f"rss_peak={row['memory_rss_peak']} bytes "
+                f"time={row['elapsed_s']:.6f}s "
+                f"{energy_str}"
+                f"rss_peak={row['rss_peak_bytes']} bytes"
             )
     
     print(f"All benchmarks completed. Results have been saved to {csv_path}")
