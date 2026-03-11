@@ -23,6 +23,13 @@ Step 3 | create Docker container, generate inputs and run benchmarks:
 Default: generate sha256 datasets 1MiB->512MiB, build, run benchmarks
   docker run --rm -v ${PWD}:/realistic-energy realistic-energy
 
+docker run --rm \
+  --privileged \
+  --cpuset-cpus=0 \
+  -v /sys/class/powercap:/sys/class/powercap:ro \
+  -v $(pwd):/realistic-energy \
+  realistic-energy --iterations 100000
+
 Generate altered datasets, then run
   docker run --rm -v "%cd%":/realistic-energy ^
   -e MIN_SIZE=X -e MAX_SIZE=Y realistic-energy
