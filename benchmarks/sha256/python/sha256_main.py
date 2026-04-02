@@ -4,7 +4,7 @@ from pathlib import Path
 import hmac
 import hashlib
 
-from sha256_workload import workload_sha256, sink
+from sha256_workload import workload_sha256
 
 def read_file(file_path: Path) -> bytes:
     return file_path.read_bytes()
@@ -35,7 +35,7 @@ def verify(buffer: bytes, key_hmac: bytes, key_xor:bytes, ciphertext: bytearray,
 
 
 def main() -> None:
-    parser = argparse.Argumentparser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", default="../../../datasets/sha256/1048576")
     parser.add_argument("--iterations", type=int, default=100000)
     parser.add_argument("--verify", default=False)
@@ -65,5 +65,5 @@ def main() -> None:
     for _ in range(args.iterations):
         workload_sha256(buffer, key_hmac, key_xor, ciphertext, decrypted, out_hmac)
 
-    if __name__ == "__main__":
-        main()
+if __name__ == "__main__":
+    main()
