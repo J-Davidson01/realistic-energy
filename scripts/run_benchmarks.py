@@ -372,8 +372,16 @@ def main() -> None:
     datasets_root = Path(args.datasets_root)
     csv_path = make_timestamped_results_path(Path(args.results_dir))
     memory_interval_s = args.memory_interval_ms / 1000.0
-    languages = detect_languages(benchmark)
-    print(f"Detected languages for {benchmark}: {', '.join(languages)}")
+    
+    available_languages = detect_languages(benchmark)
+    requested_languages = [lang.strip() for lang in args.languages.split(",")]
+    languages = [lang for lang in requested_languages if lang in available_languages]
+
+    invalid = [lang for lang in requested_languages if lang not in available_languages]
+    if invalid:
+        print(f"Warning: requested languages not available for {benchmark}: {', '.join(invalid)}")
+
+    print(f"Running languages: {', '.join(languages)}")
     
     dataset_dirs = discover_datasets(benchmark, datasets_root)
     if not dataset_dirs:

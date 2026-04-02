@@ -26,6 +26,8 @@ def workload_sha256(buffer: bytes, key_hmac: bytes,
     sink ^= decrypted[0]
 
 
+# // volatile sink 
+
 # // function WORKLOAD_SHA256(buffer, key_hmac, key_xor):
 
 # //     # -----------------------------
@@ -51,3 +53,5 @@ def workload_sha256(buffer: bytes, key_hmac: bytes,
 # //     # 4. Discard output
 # //     # -----------------------------
 # //     return hmac_value   # plaintext discarded
+# //     sink ^= out_hmac[0]
+# //     sink ^= decrypted[0]

@@ -76,13 +76,16 @@ done
 # 5) Build Go workloads
 # -----------------------------
 echo "[entrypoint] Building Go workloads..."
-find benchmarks -type f -name go.mod 2>/dev/null | while read -r gomod; do
-  dir="$(dirname "$gomod")"
-  if [[ "$REBUILD" == "1" ]]; then
-    (cd "$dir" && go build -o sha256_go .)
+find benchmarks -type f -name '*_main.go' 2>/dev/null | while read -r mainfile; do
+  dir="$(dirname "$mainfile")"
+  base="$(basename "$mainfile" _main.go)"
+  out="$dir/${base}_go"
+
+  if [[ "$REBUILD" == "1" || ! -f "$out" ]]; then
+    echo "  building $dir -> $out"
+    (cd "$dir" && go build -o "$(basename "$out")" .)
   else
-    # just build anyway; go build is usually quick
-    (cd "$dir" && go build -o sha256_go .)
+    echo "  (skip) $dir already built"
   fi
 done
 
