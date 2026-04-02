@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     golang-go \
     wget \
     xz-utils \
+    libcjson-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Julia (pinned version for reproducibility)

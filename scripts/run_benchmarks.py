@@ -245,7 +245,7 @@ def run_benchmark(
     end_snapshot = snapshot_rapl(rapl_zones) if rapl_zones else {}
 
     energy_j = (
-        compute_total_package_energy(rapl_zones, start_snapshot, end_snapshot)
+        compute_total_package_energy(start_snapshot, end_snapshot, rapl_zones)
         if rapl_zones else None
     )
 
@@ -351,12 +351,9 @@ def get_language_command(language: str, benchmark: str, dataset_dir: Path, itera
 
     return command
 
-#======
-# Main
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run benchmarks and collect energy and memory usage data")
-    parser.add_argument("--benchmark", type=str, default="sha256", help="Name of the benchmark to run (used as subdirectory in datasets), e.g. sha256,json_parse,file_copy,pipeline")
+    parser.add_argument("--benchmark", type=str, default="sha256,json_parse", help="Comma-separated benchmark names, e.g. sha256,json_parse,file_copy,pipeline")
     parser.add_argument("--languages", type=str, default="c,go,python,julia", help="Comma-separated list of languages to run, e.g. c,go,python,julia")
     parser.add_argument("--iterations", type=int, default=100000, help="Number of iterations to run each benchmark")
     parser.add_argument("--memory-interval-ms", type=float, default=10.0, help="Interval in milliseconds between memory usage samples")
@@ -368,33 +365,24 @@ def main() -> None:
     parser.add_argument("--warmup", action="store_true")
     args = parser.parse_args()
 
-    benchmark = args.benchmark
+    benchmarks = [b.strip() for b in args.benchmark.split(",") if b.strip()]
+    requested_languages = [lang.strip() for lang in args.languages.split(",") if lang.strip()]
+
     datasets_root = Path(args.datasets_root)
     csv_path = make_timestamped_results_path(Path(args.results_dir))
     memory_interval_s = args.memory_interval_ms / 1000.0
-    
-    available_languages = detect_languages(benchmark)
-    requested_languages = [lang.strip() for lang in args.languages.split(",")]
-    languages = [lang for lang in requested_languages if lang in available_languages]
 
-    invalid = [lang for lang in requested_languages if lang not in available_languages]
-    if invalid:
-        print(f"Warning: requested languages not available for {benchmark}: {', '.join(invalid)}")
-
-    print(f"Running languages: {', '.join(languages)}")
-    
-    dataset_dirs = discover_datasets(benchmark, datasets_root)
-    if not dataset_dirs:
-        print(f"No datasets found for benchmark {benchmark} in {datasets_root}. Exiting.")
+    if not benchmarks:
+        print("No benchmarks specified. Exiting.")
         return
-    
+
     rapl_zones = discover_package_rapl_zones()
     if rapl_zones:
         zone_names = ", ".join(zone.name for zone in rapl_zones)
         print(f"Discovered RAPL zones: {zone_names}. Energy measurements will be collected for these zones.")
     else:
         print("No RAPL zones discovered. Energy measurements will be skipped.")
-    
+
     run_metadata = {
         "timestamp": datetime.now().isoformat(),
         "hostname": socket.gethostname(),
@@ -403,58 +391,78 @@ def main() -> None:
         "rapl_available": bool(rapl_zones),
     }
 
-    for language in languages:
-        if args.verify:
-            verify_dataset = dataset_dirs[0]
-            print(f"Running verification for {language} on dataset {verify_dataset.name}...")
-            if not run_verify(language, benchmark, verify_dataset):
-                print(f"Verification failed for {language}. Skipping benchmark runs for this language.")
-                continue
-            print(f"Verification succeeded for {language}. Proceeding with benchmark runs.")
+    for benchmark in benchmarks:
+        available_languages = detect_languages(benchmark)
+        languages = [lang for lang in requested_languages if lang in available_languages]
 
-        for dataset_dir in dataset_dirs:
-            if args.warmup:
-                warmup_command = get_language_command(language, benchmark, dataset_dir, 1, verify=False)
-                subprocess.run(
-                    warmup_command,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    check=False,
-                )
+        invalid = [lang for lang in requested_languages if lang not in available_languages]
+        if invalid:
+            print(f"Warning: requested languages not available for {benchmark}: {', '.join(invalid)}")
 
-            for repetition in range(args.repetitions):
-                print(
-                    f"[run] Running {benchmark} in {language} with dataset {dataset_dir.name} "
-                    f"for {args.iterations} iterations (rep {repetition + 1}/{args.repetitions})..."
-                )
+        if not languages:
+            print(f"No runnable languages found for benchmark {benchmark}. Skipping.")
+            continue
 
-                row = run_benchmark(
-                    language=language,
-                    benchmark=benchmark,
-                    dataset_dir=dataset_dir,
-                    iterations=args.iterations,
-                    memory_interval_s=memory_interval_s,
-                    rapl_zones=rapl_zones,
-                )
-                row["repetition"] = repetition
-                append_csv_row(csv_path, row)
+        print(f"Running benchmark: {benchmark}")
+        print(f"Running languages: {', '.join(languages)}")
 
-                status = "success" if row["returncode"] == 0 else f"failed (return code {row['returncode']})"
-                energy_str = (
-                    f"energy={row['energy_pkg_j']:.6f}J "
-                    if row["energy_pkg_j"] not in (None, "")
-                    else ""
-                )
+        dataset_dirs = discover_datasets(benchmark, datasets_root)
+        if not dataset_dirs:
+            print(f"No datasets found for benchmark {benchmark} in {datasets_root}. Skipping.")
+            continue
 
-                print(
-                    f" -> {status} "
-                    f"time={row['elapsed_s']:.6f}s "
-                    f"{energy_str}"
-                    f"rss_peak={row['rss_peak_bytes']} bytes"
-                )
+        for language in languages:
+            if args.verify:
+                verify_dataset = dataset_dirs[0]
+                print(f"Running verification for {language} on {benchmark} dataset {verify_dataset.name}...")
+                if not run_verify(language, benchmark, verify_dataset):
+                    print(f"Verification failed for {language}. Skipping benchmark runs for this language.")
+                    continue
+                print(f"Verification succeeded for {language}. Proceeding with benchmark runs.")
 
-                time.sleep(args.sleep_between_runs)
-    
+            for dataset_dir in dataset_dirs:
+                if args.warmup:
+                    warmup_command = get_language_command(language, benchmark, dataset_dir, 1, verify=False)
+                    subprocess.run(
+                        warmup_command,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        check=False,
+                    )
+
+                for repetition in range(args.repetitions):
+                    print(
+                        f"[run] Running {benchmark} in {language} with dataset {dataset_dir.name} "
+                        f"for {args.iterations} iterations (rep {repetition + 1}/{args.repetitions})..."
+                    )
+
+                    row = run_benchmark(
+                        language=language,
+                        benchmark=benchmark,
+                        dataset_dir=dataset_dir,
+                        iterations=args.iterations,
+                        memory_interval_s=memory_interval_s,
+                        rapl_zones=rapl_zones,
+                    )
+                    row["repetition"] = repetition
+                    append_csv_row(csv_path, row)
+
+                    status = "success" if row["returncode"] == 0 else f"failed (return code {row['returncode']})"
+                    energy_str = (
+                        f"energy={row['energy_pkg_j']:.6f}J "
+                        if row["energy_pkg_j"] not in (None, "")
+                        else ""
+                    )
+
+                    print(
+                        f" -> {status} "
+                        f"time={row['elapsed_s']:.6f}s "
+                        f"{energy_str}"
+                        f"rss_peak={row['rss_peak_bytes']} bytes"
+                    )
+
+                    time.sleep(args.sleep_between_runs)
+
     print(f"All benchmarks completed. Results have been saved to {csv_path}")
     metadata_path = csv_path.with_name(csv_path.stem + "_metadata.json")
     with open(metadata_path, "w", encoding="utf-8") as f:

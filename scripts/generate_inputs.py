@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import json
 from pathlib import Path
 
 def pow2(min_size: int, max_size: int):
@@ -24,18 +25,68 @@ def xorshift(length: int, seed: int):
         result[i] = x & 0xFF
     return bytes(result)
 
-def write(base_dir: Path, size: int, key_hmac_len: int, key_xor_len: int, buffer_len: int, seed: int):
-    """Write the generated input to a file."""
+def write_sha256(base_dir: Path, size: int, seed: int):
     outdir = base_dir / str(size)
     outdir.mkdir(parents=True, exist_ok=True)
-    
-    key_hmac = xorshift(key_hmac_len, seed)
-    key_xor = xorshift(key_xor_len, seed + 1)
-    buffer = xorshift(buffer_len, seed + 2)
+
+    key_hmac = xorshift(32, seed)
+    key_xor = xorshift(16, seed + 1)
+    buffer = xorshift(size, seed + 2)
 
     (outdir / "buffer.bin").write_bytes(buffer)
     (outdir / "key_hmac.bin").write_bytes(key_hmac)
     (outdir / "key_xor.bin").write_bytes(key_xor)
+
+def stable_bench_seed(seed: int, bench: str) -> int:
+    x = seed & 0xFFFFFFFF
+    for lang in bench.encode("utf-8"):
+        x = (x * 16777619) ^ lang
+        x &= 0xFFFFFFFF
+    return x
+
+def deterministic_string(seed: int, index: int, length: int) -> str:
+    raw = xorshift(length, seed + index)
+    alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
+    return "".join(alphabet[b % len(alphabet)] for b in raw)
+
+def make_json_item(seed: int, index: int) -> dict:
+    return {
+        "id": index,
+        "name": deterministic_string(seed + 1000, index, 12),
+        "active": (index % 2 == 0),
+        "score": ((seed ^ index) % 100000),
+        "category": deterministic_string(seed + 2000, index, 4),
+    }
+
+def compact_json_bytes(obj) -> bytes:
+    return json.dumps(obj, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+
+def write_json_parse(base_dir: Path, size: int, seed: int):
+    outdir = base_dir / str(size)
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    prefix = b'{"items":['
+    suffix = b']}'
+
+    parts = []
+    total_len = len(prefix) + len(suffix)
+    index = 0
+
+    while total_len < size:
+        item = make_json_item(seed, index)
+        item_bytes = json.dumps(item, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+
+        extra = len(item_bytes)
+        if parts:
+            extra += 1  # comma
+
+        parts.append(item_bytes)
+        total_len += extra
+        index += 1
+
+    data = prefix + b",".join(parts) + suffix
+    (outdir / "input.json").write_bytes(data)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Generate input files for the benchmarks")
@@ -43,7 +94,7 @@ def main():
     parser.add_argument("--min-size", type=int, default=64, help="Minimum size of the buffer (in bytes)")
     parser.add_argument("--max-size", type=int, default=1024*1024*512, help="Maximum size of the buffer (in bytes)")
     parser.add_argument("--seed", type=int, default=12345, help="Seed for random number generation")
-    parser.add_argument("--benchmarks", type=str, default="sha256", help="Name of the benchmark(s) (used as subdirectory), comma seperated, e.g. sha256,json_parse,file_copy,pipeline")
+    parser.add_argument("--benchmarks", type=str, default="sha256,json_parse", help="Name of the benchmark(s) (used as subdirectory), comma seperated, e.g. sha256,json_parse,file_copy,pipeline")
     parser.add_argument("--out-root", type=str, default="datasets", help="Root directory for generated inputs")
     
     args = parser.parse_args()
@@ -63,13 +114,20 @@ def main():
         print(f"Generating inputs for benchmark: {bench}")
         base_dir = out_root / bench
         base_dir.mkdir(parents=True, exist_ok=True)
-        bench_seed = args.seed + hash(bench) % (2**32)  # Derive a unique seed for each benchmark, while remaining deterministic
-        
+
+        bench_seed = stable_bench_seed(args.seed, bench)
+
         for size in sizes:
-            write(base_dir, size, 32, 16, size, bench_seed)
+            if bench == "sha256":
+                write_sha256(base_dir, size, bench_seed + size)
+            elif bench == "json_parse":
+                write_json_parse(base_dir, size, bench_seed + size)
+            else:
+                print(f"Skipping unsupported benchmark: {bench}")
+                continue
             total += 1
 
-    print(f"Generated {total} input files for benchmarks: {', '.join(benchmarks)}")
+    print(f"Generated {total} dataset directories for benchmarks: {', '.join(benchmarks)}")
 
 if __name__ == "__main__":
     main()
