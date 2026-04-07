@@ -32,6 +32,7 @@ void workload_sha256(
     
 }
 
+// volatile sink 
 
 // function WORKLOAD_SHA256(buffer, key_hmac, key_xor):
 
@@ -58,3 +59,5 @@ void workload_sha256(
 //     # 4. Discard output
 //     # -----------------------------
 //     return hmac_value   # plaintext discarded
+//     sink ^= out_hmac[0]
+//     sink ^= decrypted[0]
