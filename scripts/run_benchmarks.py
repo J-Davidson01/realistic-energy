@@ -337,9 +337,11 @@ def get_language_command(language: str, benchmark: str, dataset_dir: Path, itera
             "--iterations", str(iterations),
         ]
     elif language == "julia":
+        julia_dir = benchmark_root / "julia"
         command = [
             "julia",
-            str(benchmark_root / "julia" / f"{benchmark}_main.jl"),
+            f"--project={julia_dir}",
+            str(julia_dir / f"{benchmark}_main.jl"),
             "--dataset", str(dataset_dir),
             "--iterations", str(iterations),
         ]
