@@ -11,6 +11,4 @@ int workload_json_parse(
     size_t *output_len
 );
 
-int verify_json_parse_output(const char *output_json);
-
 #endif

@@ -361,7 +361,7 @@ def main() -> None:
     parser.add_argument("--verify", action="store_true", help="Whether to run verification before the benchmark")
     parser.add_argument("--datasets-root", default=str(DATASETS_ROOT), help="Root directory where datasets are stored")
     parser.add_argument("--repetitions", type=int, default=5)
-    parser.add_argument("--sleep-between-runs", type=float, default=1.0)
+    parser.add_argument("--sleep-between-runs", type=float, default=0.1)
     parser.add_argument("--warmup", action="store_true")
     args = parser.parse_args()
 

@@ -4,7 +4,7 @@ set -euo pipefail
 cd /realistic-energy
 mkdir -p results
 
-BENCHMARKS="${BENCHMARKS:-sha256}"
+BENCHMARKS="${BENCHMARKS:-sha256,json_parse}"
 MIN_SIZE="${MIN_SIZE:-1048576}" # 1 MiB
 MAX_SIZE="${MAX_SIZE:-536870912}" # 512 MiB
 REGEN="${REGEN:-0}"     # set to 1 to force regen datasets

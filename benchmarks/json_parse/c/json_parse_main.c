@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <ctype.h>
+#include <cjson/cJSON.h>
 
 static unsigned char* read_file(const char* path, size_t *out_len) {
         FILE *file = fopen(path, "rb");
@@ -74,6 +76,64 @@ static bool has_flag(int argc, char **argv, const char *name) {
         }
     }
     return false;
+}
+
+// Verification function to check if the output JSON is correct, 
+// called from _main when --verify flag is set
+int verify_json_parse_output(const char *output_json) {
+    if (!output_json) {
+        return 0;
+    }
+
+    cJSON *root = cJSON_Parse(output_json);
+    if (!root) {
+        return 0;
+    }
+
+    cJSON *items = cJSON_GetObjectItemCaseSensitive(root, "items");
+    if (!cJSON_IsArray(items)) {
+        cJSON_Delete(root);
+        return 0;
+    }
+
+    cJSON *item = NULL;
+    cJSON_ArrayForEach(item, items) {
+        if (!cJSON_IsObject(item)) {
+            cJSON_Delete(root);
+            return 0;
+        }
+
+        cJSON *id = cJSON_GetObjectItemCaseSensitive(item, "id");
+        cJSON *active = cJSON_GetObjectItemCaseSensitive(item, "active");
+        cJSON *name = cJSON_GetObjectItemCaseSensitive(item, "name");
+        cJSON *name_length = cJSON_GetObjectItemCaseSensitive(item, "name_length");
+
+        if (!cJSON_IsNumber(id) ||
+            !cJSON_IsBool(active) ||
+            !cJSON_IsString(name) || !name->valuestring ||
+            !cJSON_IsNumber(name_length)) {
+            cJSON_Delete(root);
+            return 0;
+        }
+
+        size_t actual_len = strlen(name->valuestring);
+        if ((size_t)name_length->valuedouble != actual_len) {
+            cJSON_Delete(root);
+            return 0;
+        }
+
+        for (size_t i = 0; i < actual_len; i++) {
+            unsigned char ch = (unsigned char)name->valuestring[i];
+            if (isalpha(ch) && name->valuestring[i] != (char)toupper(ch)) {
+                cJSON_Delete(root);
+                return 0;
+            }
+        }
+    }
+
+    cJSON_Delete(root);
+    return 1;
+
 }
 
 int main(int argc, char **argv) {
