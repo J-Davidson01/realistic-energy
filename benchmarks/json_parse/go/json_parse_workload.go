@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"strings"
-	"sync/atomic"
 )
 
 var sink uint64
@@ -25,7 +24,7 @@ func workloadJSONParse(input []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	for i := range root.Items {
+	for I := range root.Items {
 		root.Items[I].ID += 1
 		root.Items[I].Active = !root.Items[I].Active
 		root.Items[I].Name = strings.ToUpper(root.Items[I].Name)
@@ -37,9 +36,9 @@ func workloadJSONParse(input []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	atomic.XorUint64(&sink, uint64(len(outputJSON)))
+	sink ^= uint64(len(outputJSON))
 	if len(outputJSON) > 0 {
-		atomic.XorUint64(&sink, uint64(outputJSON[0]))
+		sink ^= uint64(outputJSON[0])
 	}
 
 	return outputJSON, nil
