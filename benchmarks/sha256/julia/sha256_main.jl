@@ -1,3 +1,7 @@
+import Pkg
+Pkg.activate(@__DIR__)
+using SHA
+
 include("sha256_workload.jl")
 
 function parse_args(args)

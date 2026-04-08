@@ -18,30 +18,25 @@ type Root struct {
 	Items []Item `json:"items"`
 }
 
-func workloadJSONParse(input []byte) ([]byte, error) {
+func workloadJSONParse(input []byte) []byte {
 	var root Root
-	if err := json.Unmarshal(input, &root); err != nil {
-		return nil, err
+
+	json.Unmarshal(input, &root)
+
+	for i := range root.Items {
+		root.Items[i].ID += 1
+		root.Items[i].Active = !root.Items[i].Active
+		root.Items[i].Name = strings.ToUpper(root.Items[i].Name)
+		root.Items[i].NameLength = len(root.Items[i].Name)
 	}
 
-	for I := range root.Items {
-		root.Items[I].ID += 1
-		root.Items[I].Active = !root.Items[I].Active
-		root.Items[I].Name = strings.ToUpper(root.Items[I].Name)
-		root.Items[I].NameLength = len(root.Items[I].Name)
-	}
+	outputJSON, _ := json.Marshal(root)
 
-	outputJSON, err := json.Marshal(root)
-	if err != nil {
-		return nil, err
-	}
-
+	// Prevent optimization
 	sink ^= uint64(len(outputJSON))
-	if len(outputJSON) > 0 {
-		sink ^= uint64(outputJSON[0])
-	}
+	sink ^= uint64(outputJSON[0])
 
-	return outputJSON, nil
+	return outputJSON
 }
 
 // function WORKLOAD_JSON_PARSE(input_json_text):
