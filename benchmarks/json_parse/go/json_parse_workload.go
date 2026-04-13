@@ -5,38 +5,36 @@ import (
 	"strings"
 )
 
-var sink uint64
+var sink byte
 
-type Item struct {
-	ID         int    `json:"id"`
-	Active     bool   `json:"active"`
-	Name       string `json:"name"`
-	NameLength int    `json:"name_length"`
-}
+func workload_json_parse(input_json []byte, output_json *[]byte, output_len *int) int {
+	var root map[string]any
 
-type Root struct {
-	Items []Item `json:"items"`
-}
+	json.Unmarshal(input_json, &root)
 
-func workloadJSONParse(input []byte) []byte {
-	var root Root
+	items := root["items"].([]any)
 
-	json.Unmarshal(input, &root)
+	for _, item_raw := range items {
+		item := item_raw.(map[string]any)
 
-	for i := range root.Items {
-		root.Items[i].ID += 1
-		root.Items[i].Active = !root.Items[i].Active
-		root.Items[i].Name = strings.ToUpper(root.Items[i].Name)
-		root.Items[i].NameLength = len(root.Items[i].Name)
+		item["id"] = item["id"].(float64) + 1
+		item["active"] = !item["active"].(bool)
+
+		name := item["name"].(string)
+		upper := strings.ToUpper(name)
+		item["name"] = upper
+		item["name_length"] = len(upper)
 	}
 
-	outputJSON, _ := json.Marshal(root)
+	serialized, _ := json.Marshal(root)
 
-	// Prevent optimization
-	sink ^= uint64(len(outputJSON))
-	sink ^= uint64(outputJSON[0])
+	*output_json = serialized
+	*output_len = len(serialized)
 
-	return outputJSON
+	sink ^= byte(*output_len & 0xFF)
+	sink ^= serialized[0]
+
+	return 1
 }
 
 // function WORKLOAD_JSON_PARSE(input_json_text):

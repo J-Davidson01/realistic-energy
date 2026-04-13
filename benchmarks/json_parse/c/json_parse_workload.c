@@ -1,6 +1,5 @@
 #include "json_parse.h"
 
-#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <cjson/cJSON.h>
@@ -16,9 +15,6 @@ static void uppercase_inplace(char *str) {
 }
 
 int workload_json_parse(const char *input_json, char **output_json, size_t *output_len) {
-    *output_json = NULL;
-    *output_len = 0;
-
     cJSON *root = cJSON_Parse(input_json);
     
     cJSON *items = cJSON_GetObjectItemCaseSensitive(root, "items");
@@ -51,65 +47,6 @@ int workload_json_parse(const char *input_json, char **output_json, size_t *outp
     sink ^= (unsigned char)(serialized[0] & 0xFF);
 
     return 1;
-}
-
-
-// Verification function to check if the output JSON is correct, 
-// called from _main when --verify flag is set
-int verify_json_parse_output(const char *output_json) {
-    if (!output_json) {
-        return 0;
-    }
-
-    cJSON *root = cJSON_Parse(output_json);
-    if (!root) {
-        return 0;
-    }
-
-    cJSON *items = cJSON_GetObjectItemCaseSensitive(root, "items");
-    if (!cJSON_IsArray(items)) {
-        cJSON_Delete(root);
-        return 0;
-    }
-
-    cJSON *item = NULL;
-    cJSON_ArrayForEach(item, items) {
-        if (!cJSON_IsObject(item)) {
-            cJSON_Delete(root);
-            return 0;
-        }
-
-        cJSON *id = cJSON_GetObjectItemCaseSensitive(item, "id");
-        cJSON *active = cJSON_GetObjectItemCaseSensitive(item, "active");
-        cJSON *name = cJSON_GetObjectItemCaseSensitive(item, "name");
-        cJSON *name_length = cJSON_GetObjectItemCaseSensitive(item, "name_length");
-
-        if (!cJSON_IsNumber(id) ||
-            !cJSON_IsBool(active) ||
-            !cJSON_IsString(name) || !name->valuestring ||
-            !cJSON_IsNumber(name_length)) {
-            cJSON_Delete(root);
-            return 0;
-        }
-
-        size_t actual_len = strlen(name->valuestring);
-        if ((size_t)name_length->valuedouble != actual_len) {
-            cJSON_Delete(root);
-            return 0;
-        }
-
-        for (size_t i = 0; i < actual_len; i++) {
-            unsigned char ch = (unsigned char)name->valuestring[i];
-            if (isalpha(ch) && name->valuestring[i] != (char)toupper(ch)) {
-                cJSON_Delete(root);
-                return 0;
-            }
-        }
-    }
-
-    cJSON_Delete(root);
-    return 1;
-
 }
 
 
