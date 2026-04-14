@@ -87,6 +87,13 @@ def write_json_parse(base_dir: Path, size: int, seed: int):
     data = prefix + b",".join(parts) + suffix
     (outdir / "input.json").write_bytes(data)
 
+def write_file_copy(base_dir: Path, size: int, seed: int):
+    outdir = base_dir / str(size)
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    data = xorshift(size, seed)
+    (outdir / "input.bin").write_bytes(data)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Generate input files for the benchmarks")
@@ -122,6 +129,8 @@ def main():
                 write_sha256(base_dir, size, bench_seed + size)
             elif bench == "json_parse":
                 write_json_parse(base_dir, size, bench_seed + size)
+            elif bench == "file_copy":
+                write_file_copy(base_dir, size, bench_seed + size)
             else:
                 print(f"Skipping unsupported benchmark: {bench}")
                 continue

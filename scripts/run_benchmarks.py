@@ -191,6 +191,8 @@ def run_verify(language: str, benchmark: str, dataset_dir: Path) -> bool:
     command = get_language_command(language, benchmark, dataset_dir, 1, verify=True)
     completed = run_command_capture(command)
 
+    cleanup_file_copy_outputs(benchmark, dataset_dir)
+
     if completed.returncode != 0:
         print(f"[verify:{language}] stdout:\n{completed.stdout}")
         print(f"[verify:{language}] stderr:\n{completed.stderr}")
@@ -248,6 +250,8 @@ def run_benchmark(
         compute_total_package_energy(start_snapshot, end_snapshot, rapl_zones)
         if rapl_zones else None
     )
+
+    cleanup_file_copy_outputs(benchmark, dataset_dir)
 
     size = int(dataset_dir.name)
 
@@ -353,6 +357,16 @@ def get_language_command(language: str, benchmark: str, dataset_dir: Path, itera
 
     return command
 
+def cleanup_file_copy_outputs(benchmark: str, dataset_dir: Path) -> None:
+    if benchmark != "file_copy":
+        return
+
+    output_path = dataset_dir / "output.bin"
+    try:
+        output_path.unlink()
+    except FileNotFoundError:
+        pass
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run benchmarks and collect energy and memory usage data")
     parser.add_argument("--benchmark", type=str, default="sha256,json_parse", help="Comma-separated benchmark names, e.g. sha256,json_parse,file_copy,pipeline")
@@ -431,6 +445,7 @@ def main() -> None:
                         stderr=subprocess.DEVNULL,
                         check=False,
                     )
+                    cleanup_file_copy_outputs(benchmark, dataset_dir)
 
                 for repetition in range(args.repetitions):
                     print(
