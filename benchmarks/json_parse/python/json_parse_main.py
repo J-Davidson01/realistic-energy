@@ -62,8 +62,10 @@ def main() -> None:
     input_json = read_file(dataset_dir / "input.json")
 
     if args.verify:
-        output_json, _ = workload_json_parse(input_json)
-        verified = verify_json_parse_output(output_json)
+        output_json = [""]
+        output_len = [0]
+        workload_json_parse(input_json, output_json, output_len)
+        verified = verify_json_parse_output(output_json[0])
 
         if verified:
             print("verify= 1")
@@ -75,11 +77,12 @@ def main() -> None:
 
     for i in range(args.iterations):
         try:
-            workload_json_parse(input_json)
+            output_json = [""]
+            output_len = [0]
+            workload_json_parse(input_json, output_json, output_len)
         except Exception:
             print(f"workload_json_parse failed at iteration {i}")
             raise SystemExit(1)
-
 
 if __name__ == "__main__":
     main()
