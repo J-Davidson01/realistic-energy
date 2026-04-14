@@ -1,29 +1,31 @@
-#!/usr/bin/env python3
 import json
 
 sink = 0
 
-def workload_json_parse(input_json_text: str) -> tuple[str, int]:
+def workload_json_parse(input_json: str, output_json: list[str], output_len: list[int]) -> int:
     global sink
 
-    parsed_root = json.loads(input_json_text)
+    root = json.loads(input_json)
 
-    items = parsed_root["items"]
+    items = root["items"]
     for item in items:
-        item["id"] += 1
+        item["id"] = item["id"] + 1
         item["active"] = not item["active"]
 
-        upper_name = item["name"].upper()
-        item["name"] = upper_name
-        item["name_length"] = len(upper_name)
+        upper = item["name"].upper()
+        item["name"] = upper
+        item["name_length"] = len(upper.encode("utf-8"))
 
-    output_json_text = json.dumps(parsed_root, separators=(",", ":"))
-    output_len = len(output_json_text)
+    serialized = json.dumps(root, separators=(",", ":"))
+    serialized_bytes = serialized.encode("utf-8")
 
-    sink ^= output_len & 0xFF
-    sink ^= ord(output_json_text[0]) & 0xFF
+    output_json[0] = serialized
+    output_len[0] = len(serialized_bytes)
 
-    return output_json_text, output_len
+    sink ^= output_len[0] & 0xFF
+    sink ^= serialized_bytes[0]
+
+    return 1
 
 
 # // volatile sink

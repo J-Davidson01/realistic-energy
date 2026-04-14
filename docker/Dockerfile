@@ -20,8 +20,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Julia (pinned version for reproducibility)
-ARG JULIA_VERSION=1.11.3
-RUN wget -q https://julialang-s3.julialang.org/bin/linux/x64/1.11/julia-${JULIA_VERSION}-linux-x86_64.tar.gz \
+ARG JULIA_VERSION=1.12.5
+RUN wget -q https://julialang-s3.julialang.org/bin/linux/x64/1.12/julia-${JULIA_VERSION}-linux-x86_64.tar.gz \
     && mkdir -p /opt/julia \
     && tar -xzf julia-${JULIA_VERSION}-linux-x86_64.tar.gz -C /opt/julia --strip-components=1 \
     && rm julia-${JULIA_VERSION}-linux-x86_64.tar.gz
