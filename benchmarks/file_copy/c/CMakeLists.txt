@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 add_executable(file_copy_c
-    main.c
+    file_copy_main.c
     file_copy_workload.c
 )
 
