@@ -191,6 +191,8 @@ def run_verify(language: str, benchmark: str, dataset_dir: Path) -> bool:
     command = get_language_command(language, benchmark, dataset_dir, 1, verify=True)
     completed = run_command_capture(command)
 
+    cleanup_file_copy_outputs(benchmark, dataset_dir)
+
     if completed.returncode != 0:
         print(f"[verify:{language}] stdout:\n{completed.stdout}")
         print(f"[verify:{language}] stderr:\n{completed.stderr}")
@@ -248,6 +250,8 @@ def run_benchmark(
         compute_total_package_energy(start_snapshot, end_snapshot, rapl_zones)
         if rapl_zones else None
     )
+
+    cleanup_file_copy_outputs(benchmark, dataset_dir)
 
     size = int(dataset_dir.name)
 
@@ -353,11 +357,32 @@ def get_language_command(language: str, benchmark: str, dataset_dir: Path, itera
 
     return command
 
+def cleanup_file_copy_outputs(benchmark: str, dataset_dir: Path) -> None:
+    if benchmark != "file_copy":
+        return
+
+    output_path = dataset_dir / "output.bin"
+    try:
+        output_path.unlink()
+    except FileNotFoundError:
+        pass
+
+def filter_datasets_by_size(dataset_dirs: List[Path], min_size: int | None, max_size: int | None) -> List[Path]:
+    filtered = []
+    for d in dataset_dirs:
+        size = int(d.name)
+        if min_size is not None and size < min_size:
+            continue
+        if max_size is not None and size > max_size:
+            continue
+        filtered.append(d)
+    return filtered
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run benchmarks and collect energy and memory usage data")
     parser.add_argument("--benchmark", type=str, default="sha256,json_parse", help="Comma-separated benchmark names, e.g. sha256,json_parse,file_copy,pipeline")
     parser.add_argument("--languages", type=str, default="c,go,python,julia", help="Comma-separated list of languages to run, e.g. c,go,python,julia")
-    parser.add_argument("--iterations", type=int, default=100000, help="Number of iterations to run each benchmark")
+    parser.add_argument("--iterations", type=int, default=25, help="Number of iterations to run each benchmark")
     parser.add_argument("--memory-interval-ms", type=float, default=10.0, help="Interval in milliseconds between memory usage samples")
     parser.add_argument("--results-dir", type=Path, default=RESULTS_DIR / "benchmark_results.csv", help="Directory to store results CSV files")
     parser.add_argument("--verify", action="store_true", help="Whether to run verification before the benchmark")
@@ -365,6 +390,8 @@ def main() -> None:
     parser.add_argument("--repetitions", type=int, default=5)
     parser.add_argument("--sleep-between-runs", type=float, default=0.1)
     parser.add_argument("--warmup", action="store_true")
+    parser.add_argument("--min-dataset-size", type=int, default=None, help="Minimum dataset size in bytes to include")
+    parser.add_argument("--max-dataset-size", type=int, default=None, help="Maximum dataset size in bytes to include")
     args = parser.parse_args()
 
     benchmarks = [b.strip() for b in args.benchmark.split(",") if b.strip()]
@@ -409,6 +436,12 @@ def main() -> None:
         print(f"Running languages: {', '.join(languages)}")
 
         dataset_dirs = discover_datasets(benchmark, datasets_root)
+        dataset_dirs = filter_datasets_by_size(
+            dataset_dirs,
+            args.min_dataset_size,
+            args.max_dataset_size,
+        )
+        
         if not dataset_dirs:
             print(f"No datasets found for benchmark {benchmark} in {datasets_root}. Skipping.")
             continue
@@ -431,6 +464,7 @@ def main() -> None:
                         stderr=subprocess.DEVNULL,
                         check=False,
                     )
+                    cleanup_file_copy_outputs(benchmark, dataset_dir)
 
                 for repetition in range(args.repetitions):
                     print(

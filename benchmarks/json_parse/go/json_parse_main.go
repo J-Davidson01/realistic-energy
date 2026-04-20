@@ -9,16 +9,20 @@ import (
 )
 
 func verifyJSONParseOutput(outputJSON []byte) bool {
-	var root Root
-	if err := json.Unmarshal(outputJSON, &root); err != nil {
-		return false
-	}
+	var root map[string]any
+	json.Unmarshal(outputJSON, &root)
 
-	for _, item := range root.Items {
-		if item.NameLength != len(item.Name) {
+	items := root["items"].([]any)
+	for _, itemRaw := range items {
+		item := itemRaw.(map[string]any)
+
+		name := item["name"].(string)
+		nameLength := int(item["name_length"].(float64))
+
+		if nameLength != len(name) {
 			return false
 		}
-		if item.Name != strings.ToUpper(item.Name) {
+		if name != strings.ToUpper(name) {
 			return false
 		}
 	}
@@ -33,16 +37,14 @@ func main() {
 	flag.Parse()
 
 	inputPath := *dataset + "/input.json"
-
-	inputJSON, err := os.ReadFile(inputPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to load input JSON: %v\n", err)
-		os.Exit(1)
-	}
+	inputJSON, _ := os.ReadFile(inputPath)
 
 	if *verify {
-		outputJSON, err := workloadJSONParse(inputJSON)
-		verified := err == nil && verifyJSONParseOutput(outputJSON)
+		var outputJSON []byte
+		var outputLen int
+
+		workload_json_parse(inputJSON, &outputJSON, &outputLen)
+		verified := verifyJSONParseOutput(outputJSON)
 
 		fmt.Printf("verify= %d\n", boolToInt(verified))
 		if verified {
@@ -52,11 +54,9 @@ func main() {
 	}
 
 	for i := uint64(0); i < *iterations; i++ {
-		_, err := workloadJSONParse(inputJSON)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "workloadJSONParse failed at iteration %d: %v\n", i, err)
-			os.Exit(1)
-		}
+		var outputJSON []byte
+		var outputLen int
+		workload_json_parse(inputJSON, &outputJSON, &outputLen)
 	}
 }
 
