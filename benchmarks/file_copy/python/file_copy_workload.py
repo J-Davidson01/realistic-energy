@@ -6,47 +6,35 @@ sink = 0
 FILE_COPY_WRITE_AMPLIFICATION = 8
 FILE_COPY_SYNC_INTERVAL = 64 * 1024 * 1024
 
-def write_all(dst, buffer: bytearray, length: int) -> None:
+
+def write_all(dst, buffer: bytes) -> None:
     written = 0
     view = memoryview(buffer)
-    while written < length:
-        written += dst.write(view[written:length])
+    length = len(buffer)
 
-def workload_file_copy(src_path: str, dst_path: str, buffer: bytearray) -> int:
+    while written < length:
+        written += dst.write(view[written:])
+
+
+def workload_file_copy(dst, buffer: bytes) -> int:
     global sink
 
-    src = open(src_path, "rb")
-    dst = open(dst_path, "wb")
-
-    total_bytes_read = 0
-    total_bytes_written = 0
     bytes_since_sync = 0
+    buffer_len = len(buffer)
 
-    while True:
-        bytes_read = src.readinto(buffer)
-        if bytes_read == 0:
-            break
+    for _ in range(FILE_COPY_WRITE_AMPLIFICATION):
+        write_all(dst, buffer)
+        bytes_since_sync += buffer_len
 
-        total_bytes_read += bytes_read
-
-        for _ in range(FILE_COPY_WRITE_AMPLIFICATION):
-            write_all(dst, buffer, bytes_read)
-            total_bytes_written += bytes_read
-            bytes_since_sync += bytes_read
-
-            if bytes_since_sync >= FILE_COPY_SYNC_INTERVAL:
-                dst.flush()
-                os.fsync(dst.fileno())
-                bytes_since_sync = 0
+        if bytes_since_sync >= FILE_COPY_SYNC_INTERVAL:
+            dst.flush()
+            os.fsync(dst.fileno())
+            bytes_since_sync = 0
 
     dst.flush()
     os.fsync(dst.fileno())
 
-    sink ^= (total_bytes_read & 0xFF)
-    sink ^= (total_bytes_written & 0xFF)
+    sink ^= (buffer_len & 0xFF)
     sink ^= buffer[0]
 
-    src.close()
-    dst.close()
-
-    return total_bytes_written
+    return 1

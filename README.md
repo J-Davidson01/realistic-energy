@@ -51,3 +51,7 @@ If you want to learn more about creating good readme files then refer the follow
 - [ASP.NET Core](https://github.com/aspnet/Home)
 - [Visual Studio Code](https://github.com/Microsoft/vscode)
 - [Chakra Core](https://github.com/Microsoft/ChakraCore)
+
+
+prompt;
+I am currently creating a benchmark suite for measuring energy efficiency of isolated workloads vs a composite workload (end-to-end data processing pipeline consisting of all isolate workloads). We have cpu, memory and io bound. For cpu we have sha256, for memory we have a json parser and for io-bound I have this file_copy workload. We have a {workload}_main.{language} and {workload}_workload.{language}, for each language, where the workload is explicitly the workload without any error checking and main is somewhat the orchestrator, who prepares the buffers once based on dataset and calls the workload iteratively.
