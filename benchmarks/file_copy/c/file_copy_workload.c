@@ -17,12 +17,10 @@ size_t workload_file_copy(
     const unsigned char *buffer,
     size_t buffer_len
 ) {
-    size_t total_bytes_written = 0;
     size_t bytes_since_sync = 0;
 
     for (int i = 0; i < FILE_COPY_WRITE_AMPLIFICATION; i++) {
         write_all(dst_fd, buffer, buffer_len);
-        total_bytes_written += buffer_len;
         bytes_since_sync += buffer_len;
 
         if (bytes_since_sync >= FILE_COPY_SYNC_INTERVAL) {
@@ -35,9 +33,7 @@ size_t workload_file_copy(
 
     sink ^= (unsigned char)(buffer_len & 0xFF);
     sink ^= (unsigned char)(total_bytes_written & 0xFF);
-    if (buffer_len > 0) {
-        sink ^= buffer[0];
-    }
+    sink ^= buffer[0];
 
-    return total_bytes_written;
+    return 1;
 }

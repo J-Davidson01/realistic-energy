@@ -141,12 +141,11 @@ int main(int argc, char **argv) {
             return 1;
         }
 
-        size_t copied_bytes = workload_file_copy(dst_fd, input_buffer, input_len);
+        workload_file_copy(dst_fd, input_buffer, input_len);
         close(dst_fd);
 
         int verification = files_equal(src_path, dst_path);
 
-        printf("copied_bytes= %zu\n", copied_bytes);
         printf("verify= %d\n", verification ? 1 : 0);
 
         free(input_buffer);

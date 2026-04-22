@@ -17,14 +17,12 @@ func writeAll(dstFile *os.File, buffer []byte) {
 	}
 }
 
-func workloadFileCopy(dstFile *os.File, buffer []byte) uint64 {
-	var totalBytesWritten uint64
+func workload_file_copy(dstFile *os.File, buffer []byte) uint64 {
 	var bytesSinceSync uint64
 	bufferLen := uint64(len(buffer))
 
 	for i := uint64(0); i < fileCopyWriteAmplification; i++ {
 		writeAll(dstFile, buffer)
-		totalBytesWritten += bufferLen
 		bytesSinceSync += bufferLen
 
 		if bytesSinceSync >= fileCopySyncInterval {
@@ -36,10 +34,7 @@ func workloadFileCopy(dstFile *os.File, buffer []byte) uint64 {
 	_ = dstFile.Sync()
 
 	sink ^= byte(bufferLen & 0xFF)
-	sink ^= byte(totalBytesWritten & 0xFF)
-	if len(buffer) > 0 {
-		sink ^= buffer[0]
-	}
+	sink ^= buffer[0]
 
-	return totalBytesWritten
+	return 1
 }

@@ -53,23 +53,27 @@ function main()
     src_path = joinpath(dataset, "input.bin")
     dst_path = joinpath(dataset, "output.bin")
 
-    buffer = Vector{UInt8}(undef, 65536)
+    input_buffer = read(src_path)
 
     if verify
-        copied_bytes = FileCopyWorkload.workload_file_copy!(src_path, dst_path, buffer)
+        dst = open(dst_path, "w")
+        FileCopyWorkload.workload_file_copy!(dst, input_buffer)
+        close(dst)
+
         verification = files_equal(
             src_path,
             dst_path,
             FileCopyWorkload.FILE_COPY_WRITE_AMPLIFICATION,
         )
 
-        println("copied_bytes= ", copied_bytes)
         println("verify= ", verification ? 1 : 0)
         return
     end
 
     for _ in 1:iterations
-        FileCopyWorkload.workload_file_copy!(src_path, dst_path, buffer)
+        dst = open(dst_path, "w")
+        FileCopyWorkload.workload_file_copy!(dst, input_buffer)
+        close(dst)
     end
 end
 
