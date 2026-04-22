@@ -10,7 +10,6 @@ import (
 const (
 	defaultDatasetDir = "../../../datasets/file_copy/1048576"
 	defaultIterations = 1000000
-	chunkSize         = 65536
 )
 
 func filesEqual(srcPath string, dstPath string, amplification int) bool {
@@ -48,11 +47,23 @@ func main() {
 	srcPath := *dataset + "/input.bin"
 	dstPath := *dataset + "/output.bin"
 
-	buffer := make([]byte, chunkSize)
+	inputBuffer, err := os.ReadFile(srcPath)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Failed to load input buffer")
+		os.Exit(1)
+	}
 
 	if *verify {
-		copiedBytes := workloadFileCopy(srcPath, dstPath, buffer)
-		verification := filesEqual(srcPath, dstPath, 8)
+		dst, err := os.Create(dstPath)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Failed to open destination file")
+			os.Exit(1)
+		}
+
+		copiedBytes := workloadFileCopy(dst, inputBuffer)
+		_ = dst.Close()
+
+		verification := filesEqual(srcPath, dstPath, int(fileCopyWriteAmplification))
 
 		fmt.Printf("copied_bytes= %d\n", copiedBytes)
 		fmt.Printf("verify= %d\n", boolToInt(verification))
@@ -64,6 +75,13 @@ func main() {
 	}
 
 	for i := uint64(0); i < *iterations; i++ {
-		_ = workloadFileCopy(srcPath, dstPath, buffer)
+		dst, err := os.Create(dstPath)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Failed to open destination file")
+			os.Exit(1)
+		}
+
+		_ = workloadFileCopy(dst, inputBuffer)
+		_ = dst.Close()
 	}
 }
