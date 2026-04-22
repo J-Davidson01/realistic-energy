@@ -1,6 +1,5 @@
 #include "file_copy.h"
 
-#include <fcntl.h>
 #include <unistd.h>
 
 volatile unsigned char sink = 0;
@@ -14,47 +13,31 @@ volatile unsigned char sink = 0;
 #endif
 
 size_t workload_file_copy(
-    const char *src_path,
-    const char *dst_path,
-    unsigned char *buffer,
-    size_t chunk_size
+    int dst_fd,
+    const unsigned char *buffer,
+    size_t buffer_len
 ) {
-    int src = open(src_path, O_RDONLY);
-    int dst = open(dst_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-
-    size_t total_bytes_read = 0;
     size_t total_bytes_written = 0;
     size_t bytes_since_sync = 0;
 
-    while (1) {
-        ssize_t bytes_read = read(src, buffer, chunk_size);
-        if (bytes_read == 0) {
-            break;
-        }
+    for (int i = 0; i < FILE_COPY_WRITE_AMPLIFICATION; i++) {
+        write_all(dst_fd, buffer, buffer_len);
+        total_bytes_written += buffer_len;
+        bytes_since_sync += buffer_len;
 
-        size_t len = (size_t)bytes_read;
-        total_bytes_read += len;
-
-        for (int i = 0; i < FILE_COPY_WRITE_AMPLIFICATION; i++) {
-            write_all(dst, buffer, len);
-            total_bytes_written += len;
-            bytes_since_sync += len;
-
-            if (bytes_since_sync >= FILE_COPY_SYNC_INTERVAL) {
-                fdatasync(dst);
-                bytes_since_sync = 0;
-            }
+        if (bytes_since_sync >= FILE_COPY_SYNC_INTERVAL) {
+            fdatasync(dst_fd);
+            bytes_since_sync = 0;
         }
     }
 
-    fdatasync(dst);
+    fdatasync(dst_fd);
 
-    sink ^= (unsigned char)(total_bytes_read & 0xFF);
+    sink ^= (unsigned char)(buffer_len & 0xFF);
     sink ^= (unsigned char)(total_bytes_written & 0xFF);
-    sink ^= buffer[0];
-
-    close(src);
-    close(dst);
+    if (buffer_len > 0) {
+        sink ^= buffer[0];
+    }
 
     return total_bytes_written;
 }

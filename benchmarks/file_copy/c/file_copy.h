@@ -3,13 +3,12 @@
 
 #include <stddef.h>
 
-extern volatile unsigned char sink;
+void write_all(int fd, const unsigned char *buffer, size_t len);
 
 size_t workload_file_copy(
-    const char *src_path,
-    const char *dst_path,
-    unsigned char *buffer,
-    size_t chunk_size
+    int dst_fd,
+    const unsigned char *buffer,
+    size_t buffer_len
 );
 
 #endif
