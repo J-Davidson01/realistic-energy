@@ -380,7 +380,7 @@ def filter_datasets_by_size(dataset_dirs: List[Path], min_size: int | None, max_
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run benchmarks and collect energy and memory usage data")
-    parser.add_argument("--benchmark", type=str, default="sha256,json_parse", help="Comma-separated benchmark names, e.g. sha256,json_parse,file_copy,pipeline")
+    parser.add_argument("--benchmark", type=str, default="sha256,json_parse,file_copy", help="Comma-separated benchmark names, e.g. sha256,json_parse,file_copy,pipeline")
     parser.add_argument("--languages", type=str, default="c,go,python,julia", help="Comma-separated list of languages to run, e.g. c,go,python,julia")
     parser.add_argument("--iterations", type=int, default=25, help="Number of iterations to run each benchmark")
     parser.add_argument("--memory-interval-ms", type=float, default=10.0, help="Interval in milliseconds between memory usage samples")
