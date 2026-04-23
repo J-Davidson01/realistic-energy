@@ -12,6 +12,15 @@ volatile unsigned char sink = 0;
 #define FILE_COPY_SYNC_INTERVAL (64ULL * 1024ULL * 1024ULL) /* 64 MiB */
 #endif
 
+void write_all(int fd, const unsigned char *buffer, size_t len) {
+    size_t written = 0;
+
+    while (written < len) {
+        ssize_t n = write(fd, buffer + written, len - written);
+        written += (size_t)n;
+    }
+}
+
 size_t workload_file_copy(
     int dst_fd,
     const unsigned char *buffer,
@@ -32,8 +41,7 @@ size_t workload_file_copy(
     fdatasync(dst_fd);
 
     sink ^= (unsigned char)(buffer_len & 0xFF);
-    sink ^= (unsigned char)(total_bytes_written & 0xFF);
-    sink ^= buffer[0];
+    sink ^= (unsigned char)buffer[0];
 
     return 1;
 }

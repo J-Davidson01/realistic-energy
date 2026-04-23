@@ -13,8 +13,15 @@ const (
 )
 
 func filesEqual(srcPath string, dstPath string, amplification int) bool {
-	src, _ := os.ReadFile(srcPath)
-	dst, _ := os.ReadFile(dstPath)
+	src, err := os.ReadFile(srcPath)
+	if err != nil {
+		return false
+	}
+
+	dst, err := os.ReadFile(dstPath)
+	if err != nil {
+		return false
+	}
 
 	if len(dst) != len(src)*amplification {
 		return false
@@ -60,12 +67,11 @@ func main() {
 			os.Exit(1)
 		}
 
-		copiedBytes := workloadFileCopy(dst, inputBuffer)
+		workload_file_copy(dst, inputBuffer)
 		_ = dst.Close()
 
 		verification := filesEqual(srcPath, dstPath, int(fileCopyWriteAmplification))
 
-		fmt.Printf("copied_bytes= %d\n", copiedBytes)
 		fmt.Printf("verify= %d\n", boolToInt(verification))
 
 		if verification {
@@ -81,7 +87,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		_ = workloadFileCopy(dst, inputBuffer)
+		workload_file_copy(dst, inputBuffer)
 		_ = dst.Close()
 	}
 }
