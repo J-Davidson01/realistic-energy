@@ -1,11 +1,11 @@
-package main
+package goworkloads
 
 import "os"
 
-var sink byte
+var file_copy_sink byte
 
 const (
-	fileCopyWriteAmplification uint64 = 8
+	FileCopyWriteAmplification uint64 = 8
 	fileCopySyncInterval       uint64 = 64 * 1024 * 1024
 )
 
@@ -17,11 +17,11 @@ func writeAll(dstFile *os.File, buffer []byte) {
 	}
 }
 
-func workload_file_copy(dstFile *os.File, buffer []byte) uint64 {
+func FileCopy(dstFile *os.File, buffer []byte) uint64 {
 	var bytesSinceSync uint64
 	bufferLen := uint64(len(buffer))
 
-	for i := uint64(0); i < fileCopyWriteAmplification; i++ {
+	for i := uint64(0); i < FileCopyWriteAmplification; i++ {
 		writeAll(dstFile, buffer)
 		bytesSinceSync += bufferLen
 
@@ -33,8 +33,8 @@ func workload_file_copy(dstFile *os.File, buffer []byte) uint64 {
 
 	_ = dstFile.Sync()
 
-	sink ^= byte(bufferLen & 0xFF)
-	sink ^= buffer[0]
+	file_copy_sink ^= byte(bufferLen & 0xFF)
+	file_copy_sink ^= buffer[0]
 
 	return 1
 }

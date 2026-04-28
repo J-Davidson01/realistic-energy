@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"realistic-energy/benchmarks/goworkloads"
 )
 
 func read(path string) []byte {
@@ -30,7 +31,7 @@ func main() {
 	outHmac := make([]byte, 32) // SHA256 produces a 32-byte hash
 
 	if *verify {
-		workload_sha256(buffer, keyHMAC, keyXOR, ciphertext, decrypted, outHmac)
+		goworkloads.SHA256Workload(buffer, keyHMAC, keyXOR, ciphertext, decrypted, outHmac)
 
 		ok := true
 		for i := 0; i < len(buffer); i++ {
@@ -50,6 +51,6 @@ func main() {
 	}
 
 	for i := 0; i < *iterations; i++ {
-		workload_sha256(buffer, keyHMAC, keyXOR, ciphertext, decrypted, outHmac)
+		goworkloads.SHA256Workload(buffer, keyHMAC, keyXOR, ciphertext, decrypted, outHmac)
 	}
 }
