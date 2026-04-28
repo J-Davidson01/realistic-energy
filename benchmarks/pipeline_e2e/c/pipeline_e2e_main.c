@@ -1,7 +1,7 @@
-#include "pipeline_e2e.h"
+#include "../../workloads/c/pipeline_e2e.h"
 
-#include "file_copy.h"
-#include "json_parse.h"
+#include "../../workloads/c/file_copy.h"
+#include "../../workloads/c/json_parse.h"
 
 #include <stdbool.h>
 #include <stdio.h>

@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"realistic-energy/benchmarks/goworkloads"
+	goworkloads "realistic-energy/benchmarks/workloads/go"
 )
 
 func read(path string) []byte {

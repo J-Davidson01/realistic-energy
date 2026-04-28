@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"realistic-energy/benchmarks/goworkloads"
+	goworkloads "realistic-energy/benchmarks/workloads/go"
 )
 
 const (
@@ -108,7 +108,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		workload_pipeline_e2e(
+		goworkloads.WorkloadPipelineE2E(
 			inputJSON,
 			keyHMAC,
 			keyXOR,
@@ -145,7 +145,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		workload_pipeline_e2e(
+		goworkloads.WorkloadPipelineE2E(
 			inputJSON,
 			keyHMAC,
 			keyXOR,

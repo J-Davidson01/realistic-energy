@@ -2,7 +2,7 @@ import Pkg
 Pkg.activate(@__DIR__)
 using JSON
 
-include("json_parse_workload.jl")
+include("../../workloads/julia/json_parse_workload.jl")
 
 function parse_args(args)
     dataset = "../../../datasets/json_parse/1048576"

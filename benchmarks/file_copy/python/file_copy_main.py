@@ -2,7 +2,7 @@
 import argparse
 from pathlib import Path
 
-from file_copy_workload import workload_file_copy, FILE_COPY_WRITE_AMPLIFICATION
+from benchmarks.workloads.python.file_copy_workload import workload_file_copy, FILE_COPY_WRITE_AMPLIFICATION
 
 
 def files_equal_amplified(src_path: Path, dst_path: Path, amplification: int) -> bool:

@@ -1,13 +1,12 @@
-package main
+package goworkloads
 
 import (
 	"os"
-	"realistic-energy/benchmarks/goworkloads"
 )
 
 var pipelineE2ESink byte
 
-func workload_pipeline_e2e(
+func WorkloadPipelineE2E(
 	inputJSON []byte,
 	keyHMAC []byte,
 	keyXOR []byte,
@@ -19,9 +18,9 @@ func workload_pipeline_e2e(
 	var transformedJSON []byte
 	var transformedLen int
 
-	goworkloads.JSONParse(inputJSON, &transformedJSON, &transformedLen)
+	JSONParse(inputJSON, &transformedJSON, &transformedLen)
 
-	goworkloads.SHA256Workload(
+	SHA256Workload(
 		transformedJSON,
 		keyHMAC,
 		keyXOR,
@@ -30,7 +29,7 @@ func workload_pipeline_e2e(
 		outHmac,
 	)
 
-	goworkloads.FileCopy(dstFile, decrypted[:transformedLen])
+	FileCopy(dstFile, decrypted[:transformedLen])
 
 	pipelineE2ESink ^= byte(transformedLen & 0xFF)
 	pipelineE2ESink ^= decrypted[0]
