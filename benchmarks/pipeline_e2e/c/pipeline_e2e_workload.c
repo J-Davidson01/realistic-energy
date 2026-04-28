@@ -6,7 +6,7 @@
 
 #include <stdlib.h>
 
-volatile unsigned char sink = 0;
+volatile unsigned char pipeline_e2e_sink = 0;
 
 size_t workload_pipeline_e2e(
     const char *input_json,
@@ -36,9 +36,9 @@ size_t workload_pipeline_e2e(
 
     workload_file_copy(dst_fd, decrypted, transformed_len);
 
-    sink ^= (unsigned char)(transformed_len & 0xFF);
-    sink ^= decrypted[0];
-    sink ^= out_hmac[0];
+    pipeline_e2e_sink ^= (unsigned char)(transformed_len & 0xFF);
+    pipeline_e2e_sink ^= decrypted[0];
+    pipeline_e2e_sink ^= out_hmac[0];
 
     free(transformed_json);
 

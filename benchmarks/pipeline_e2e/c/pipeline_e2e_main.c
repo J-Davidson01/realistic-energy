@@ -9,6 +9,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <libgen.h>
 
 #ifndef DEFAULT_JSON_DATASET_DIR
 #define DEFAULT_JSON_DATASET_DIR "../../../datasets/json_parse/1048576"
@@ -130,10 +131,61 @@ static bool file_equals_amplified_buffer(
     return extra == EOF;
 }
 
+static void derive_dataset_dirs_from_selector(
+    const char *dataset_selector,
+    char *json_dataset_dir,
+    size_t json_dataset_dir_size,
+    char *sha256_dataset_dir,
+    size_t sha256_dataset_dir_size,
+    char *output_dir,
+    size_t output_dir_size
+) {
+    char selector_copy1[512];
+    char selector_copy2[512];
+    char pipeline_root_copy[512];
+
+    snprintf(selector_copy1, sizeof(selector_copy1), "%s", dataset_selector);
+    snprintf(selector_copy2, sizeof(selector_copy2), "%s", dataset_selector);
+
+    char *size_name = basename(selector_copy1);      /* e.g. 1048576 */
+    char *pipeline_size_dir = dirname(selector_copy2); /* .../datasets/pipeline_e2e */
+
+    snprintf(pipeline_root_copy, sizeof(pipeline_root_copy), "%s", pipeline_size_dir);
+    char *datasets_root = dirname(pipeline_root_copy); /* .../datasets */
+
+    snprintf(json_dataset_dir, json_dataset_dir_size, "%s/json_parse/%s", datasets_root, size_name);
+    snprintf(sha256_dataset_dir, sha256_dataset_dir_size, "%s/sha256/%s", datasets_root, size_name);
+    snprintf(output_dir, output_dir_size, "%s/file_copy/%s", datasets_root, size_name);
+}
+
 int main(int argc, char **argv) {
-    const char *json_dataset_dir = parse_str(argc, argv, "--json-dataset", DEFAULT_JSON_DATASET_DIR);
-    const char *sha256_dataset_dir = parse_str(argc, argv, "--sha256-dataset", DEFAULT_SHA256_DATASET_DIR);
-    const char *output_dir = parse_str(argc, argv, "--output-dir", DEFAULT_OUTPUT_DIR);
+    const char *dataset_selector = parse_str(argc, argv, "--dataset", NULL);
+
+    char json_dataset_dir_buf[512];
+    char sha256_dataset_dir_buf[512];
+    char output_dir_buf[512];
+
+    const char *json_dataset_dir = NULL;
+    const char *sha256_dataset_dir = NULL;
+    const char *output_dir = NULL;
+
+    if (dataset_selector) {
+        derive_dataset_dirs_from_selector(
+            dataset_selector,
+            json_dataset_dir_buf, sizeof(json_dataset_dir_buf),
+            sha256_dataset_dir_buf, sizeof(sha256_dataset_dir_buf),
+            output_dir_buf, sizeof(output_dir_buf)
+        );
+
+        json_dataset_dir = json_dataset_dir_buf;
+        sha256_dataset_dir = sha256_dataset_dir_buf;
+        output_dir = output_dir_buf;
+    } else {
+        json_dataset_dir = parse_str(argc, argv, "--json-dataset", DEFAULT_JSON_DATASET_DIR);
+        sha256_dataset_dir = parse_str(argc, argv, "--sha256-dataset", DEFAULT_SHA256_DATASET_DIR);
+        output_dir = parse_str(argc, argv, "--output-dir", DEFAULT_OUTPUT_DIR);
+    }
+
     size_t iterations = parse_u64(argc, argv, "--iterations", DEFAULT_ITERATIONS);
     bool verify = has_flag(argc, argv, "--verify");
 

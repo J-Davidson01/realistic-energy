@@ -2,7 +2,7 @@
 
 #include <unistd.h>
 
-volatile unsigned char sink = 0;
+volatile unsigned char file_copy_sink = 0;
 
 #ifndef FILE_COPY_WRITE_AMPLIFICATION
 #define FILE_COPY_WRITE_AMPLIFICATION 8
@@ -40,8 +40,8 @@ size_t workload_file_copy(
 
     fdatasync(dst_fd);
 
-    sink ^= (unsigned char)(buffer_len & 0xFF);
-    sink ^= (unsigned char)buffer[0];
+    file_copy_sink ^= (unsigned char)(buffer_len & 0xFF);
+    file_copy_sink ^= (unsigned char)buffer[0];
 
     return 1;
 }
