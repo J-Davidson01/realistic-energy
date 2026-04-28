@@ -1,11 +1,12 @@
-import json
+#!/usr/bin/env python3
+import orjson
 
 sink = 0
 
 def workload_json_parse(input_json: str, output_json: list[str], output_len: list[int]) -> int:
     global sink
 
-    root = json.loads(input_json)
+    root = orjson.loads(input_json)
 
     items = root["items"]
     for item in items:
@@ -16,10 +17,9 @@ def workload_json_parse(input_json: str, output_json: list[str], output_len: lis
         item["name"] = upper
         item["name_length"] = len(upper.encode("utf-8"))
 
-    serialized = json.dumps(root, separators=(",", ":"))
-    serialized_bytes = serialized.encode("utf-8")
+    serialized_bytes = orjson.dumps(root)
 
-    output_json[0] = serialized
+    output_json[0] = serialized_bytes.decode("utf-8")
     output_len[0] = len(serialized_bytes)
 
     sink ^= output_len[0] & 0xFF

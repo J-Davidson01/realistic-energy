@@ -2,7 +2,7 @@
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 
-volatile unsigned char sink; // Volatile variable to prevent compiler optimizations
+volatile unsigned char sha256_sink = 0; // Volatile variable to prevent compiler optimizations
 
 void workload_sha256(
     const unsigned char *buffer, size_t buffer_len,
@@ -27,12 +27,12 @@ void workload_sha256(
     }
 
     // Discard output (use the results in a way that prevents optimization and introduces barely any overhead)
-    sink ^= out_hmac[0]; //We use ^= to prevent the compiler from optimizing away the HMAC computation, when using = some aggresive optimization cases might simplify or partially eliminate work because intermediate values are irrelevant.
-    sink ^= decrypted[0]; //Again we use ^= to prevent the compiler from optimizing away the decryption step
+    sha256_sink ^= out_hmac[0]; //We use ^= to prevent the compiler from optimizing away the HMAC computation, when using = some aggresive optimization cases might simplify or partially eliminate work because intermediate values are irrelevant.
+    sha256_sink ^= decrypted[0]; //Again we use ^= to prevent the compiler from optimizing away the decryption step
     
 }
 
-// volatile sink 
+// volatile sha256_sink 
 
 // function WORKLOAD_SHA256(buffer, key_hmac, key_xor):
 
@@ -59,5 +59,5 @@ void workload_sha256(
 //     # 4. Discard output
 //     # -----------------------------
 //     return hmac_value   # plaintext discarded
-//     sink ^= out_hmac[0]
-//     sink ^= decrypted[0]
+//     sha256_sink ^= out_hmac[0]
+//     sha256_sink ^= decrypted[0]

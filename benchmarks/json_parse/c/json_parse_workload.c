@@ -2,9 +2,10 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <cjson/cJSON.h>
 
-volatile unsigned char sink = 0; // Volatile variable to prevent compiler optimizations
+volatile unsigned char json_parse_sink = 0; // Volatile variable to prevent compiler optimizations
 
 static void uppercase_inplace(char *str) {
     if(!str) return;
@@ -43,8 +44,8 @@ int workload_json_parse(const char *input_json, char **output_json, size_t *outp
     *output_json = serialized;
     *output_len = strlen(serialized);
 
-    sink ^= (unsigned char)(*output_len & 0xFF);
-    sink ^= (unsigned char)(serialized[0] & 0xFF);
+    json_parse_sink ^= (unsigned char)(*output_len & 0xFF);
+    json_parse_sink ^= (unsigned char)(serialized[0] & 0xFF);
 
     return 1;
 }
@@ -77,9 +78,9 @@ int workload_json_parse(const char *input_json, char **output_json, size_t *outp
 //     # -----------------------------
 //     # 4. Prevent optimization
 //     # -----------------------------
-//     sink = sink XOR LENGTH(output_json_text)
+//     json_parse_sink = json_parse_sink XOR LENGTH(output_json_text)
 //     if LENGTH(output_json_text) > 0:
-//         sink = sink XOR BYTE_AT(output_json_text, 0)
+//         json_parse_sink = json_parse_sink XOR BYTE_AT(output_json_text, 0)
 
 //     # -----------------------------
 //     # 5. Free temporary parsed/serialized data

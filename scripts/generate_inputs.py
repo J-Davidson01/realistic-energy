@@ -97,6 +97,7 @@ def build_json_item_block(seed: int, block_items: int = 4096) -> list[bytes]:
         items.append(item_bytes)
     return items
 
+
 def write_json_parse(base_dir: Path, size: int, seed: int):
     outdir = base_dir / str(size)
     outdir.mkdir(parents=True, exist_ok=True)
@@ -141,13 +142,23 @@ def write_file_copy(base_dir: Path, size: int, seed: int, block_size: int):
     write_repeated_block_file(outdir / "input.bin", size, seed, block_size)
 
 
+def write_pipeline_e2e(base_dir: Path, size: int):
+    outdir = base_dir / str(size)
+    outdir.mkdir(parents=True, exist_ok=True)
+    (outdir / "README.txt").write_text(
+        "Placeholder dataset directory for pipeline_e2e. "
+        "Inputs are reused from json_parse and sha256 datasets.\n",
+        encoding="utf-8",
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate input files for the benchmarks")
     parser.add_argument("--base-dir", type=Path, default=Path("inputs"), help="Base directory for generated inputs")
     parser.add_argument("--min-size", type=int, default=64, help="Minimum size of the buffer (in bytes)")
     parser.add_argument("--max-size", type=int, default=1024 * 1024 * 512, help="Maximum size of the buffer (in bytes)")
     parser.add_argument("--seed", type=int, default=12345, help="Seed for random number generation")
-    parser.add_argument("--benchmarks", type=str, default="sha256,json_parse", help="Comma separated benchmarks")
+    parser.add_argument("--benchmarks", type=str, default="sha256,json_parse,file_copy,pipeline_e2e", help="Comma separated benchmarks")
     parser.add_argument("--out-root", type=str, default="datasets", help="Root directory for generated inputs")
     parser.add_argument("--block-size", type=int, default=4 * 1024 * 1024, help="Block size for repeated binary data generation")
 
@@ -181,6 +192,9 @@ def main():
             elif bench == "file_copy":
                 write_file_copy(base_dir, size, bench_seed + size, args.block_size)
                 print(f"Generated File Copy dataset of size {size} bytes")
+            elif bench == "pipeline_e2e":
+                write_pipeline_e2e(base_dir, size)
+                print(f"Generated pipeline_e2e placeholder dataset of size {size} bytes")
             else:
                 print(f"Skipping unsupported benchmark: {bench}")
                 continue
