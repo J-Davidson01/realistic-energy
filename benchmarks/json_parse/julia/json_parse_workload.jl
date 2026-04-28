@@ -1,3 +1,5 @@
+module JsonParseWorkload
+
 using JSON
 
 const sink = Ref{UInt8}(0x00)
@@ -25,3 +27,5 @@ function workload_json_parse(input_json::String, output_json::Base.RefValue{Stri
     
     return 1
 end
+
+end # module

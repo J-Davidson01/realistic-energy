@@ -5,7 +5,7 @@ const sink = Ref{UInt8}(0)
 const FILE_COPY_WRITE_AMPLIFICATION = 8
 const FILE_COPY_SYNC_INTERVAL = 64 * 1024 * 1024
 
-function write_all(io::IO, buffer::Vector{UInt8})
+function write_all(io::IO, buffer::AbstractVector{UInt8})
     written = 0
     len = length(buffer)
     while written < len
@@ -14,7 +14,7 @@ function write_all(io::IO, buffer::Vector{UInt8})
     return nothing
 end
 
-function workload_file_copy!(dst::IO, buffer::Vector{UInt8})
+function workload_file_copy!(dst::IO, buffer::AbstractVector{UInt8})
     bytes_since_sync = 0
     buffer_len = length(buffer)
 
@@ -24,13 +24,13 @@ function workload_file_copy!(dst::IO, buffer::Vector{UInt8})
 
         if bytes_since_sync >= FILE_COPY_SYNC_INTERVAL
             flush(dst)
-            Libc.fsync(fd(dst))
+            ccall(:fsync, Cint, (Cint,), fd(dst))
             bytes_since_sync = 0
         end
     end
 
     flush(dst)
-    Libc.fsync(fd(dst))
+    ccall(:fsync, Cint, (Cint,), fd(dst))
 
     sink[] ⊻= UInt8(buffer_len & 0xff)
     sink[] ⊻= buffer[1]
