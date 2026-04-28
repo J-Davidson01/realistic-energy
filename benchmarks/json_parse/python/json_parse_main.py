@@ -2,6 +2,7 @@
 import argparse
 import json
 from pathlib import Path
+
 from json_parse_workload import workload_json_parse
 
 def read_file(file_path: Path) -> str:
@@ -41,7 +42,7 @@ def verify_json_parse_output(output_json: str) -> bool:
         if not isinstance(name_length_value, (int, float)):
             return False
 
-        actual_len = len(name_value)
+        actual_len = len(name_value.encode("utf-8"))
         if int(name_length_value) != actual_len:
             return False
 
@@ -67,12 +68,9 @@ def main() -> None:
         workload_json_parse(input_json, output_json, output_len)
         verified = verify_json_parse_output(output_json[0])
 
-        if verified:
-            print("verify= 1")
-        else:
-            print("verify= 0")
+        print(f"verify= {1 if verified else 0}")
+        if not verified:
             raise SystemExit(1)
-
         return
 
     for i in range(args.iterations):
