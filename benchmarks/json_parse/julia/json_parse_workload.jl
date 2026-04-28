@@ -1,3 +1,5 @@
+module JsonParseWorkload
+
 using JSON
 
 const sink = Ref{UInt8}(0x00)
