@@ -27,3 +27,5 @@ function workload_json_parse(input_json::String, output_json::Base.RefValue{Stri
     
     return 1
 end
+
+end # module

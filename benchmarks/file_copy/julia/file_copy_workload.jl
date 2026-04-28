@@ -24,13 +24,13 @@ function workload_file_copy!(dst::IO, buffer::AbstractVector{UInt8})
 
         if bytes_since_sync >= FILE_COPY_SYNC_INTERVAL
             flush(dst)
-            Libc.fsync(fd(dst))
+            ccall(:fsync, Cint, (Cint,), fd(dst))
             bytes_since_sync = 0
         end
     end
 
     flush(dst)
-    Libc.fsync(fd(dst))
+    ccall(:fsync, Cint, (Cint,), fd(dst))
 
     sink[] ⊻= UInt8(buffer_len & 0xff)
     sink[] ⊻= buffer[1]

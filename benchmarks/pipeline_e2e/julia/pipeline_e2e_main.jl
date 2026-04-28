@@ -118,7 +118,7 @@ function main()
 
         verify_json = Ref("")
         verify_len = Ref(0)
-        PipelineE2EWorkload.workload_json_parse(input_json, verify_json, verify_len)
+        PipelineE2EWorkload.JsonParseWorkload.workload_json_parse(input_json, verify_json, verify_len)
 
         verify_bytes = Vector{UInt8}(codeunits(verify_json[]))
         crypto_ok = isempty(verify_bytes) || (@view(decrypted[1:verify_len[]]) == verify_bytes)

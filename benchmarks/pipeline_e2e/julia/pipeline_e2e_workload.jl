@@ -18,7 +18,7 @@ function workload_pipeline_e2e!(
     output_json = Ref("")
     output_len = Ref(0)
 
-    workload_json_parse(input_json, output_json, output_len)
+    JsonParseWorkload.workload_json_parse(input_json, output_json, output_len)
 
     transformed_json = output_json[]
     transformed_len = output_len[]
