@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"realistic-energy/benchmarks/goworkloads"
 	"strings"
 )
 
@@ -43,7 +44,7 @@ func main() {
 		var outputJSON []byte
 		var outputLen int
 
-		workload_json_parse(inputJSON, &outputJSON, &outputLen)
+		goworkloads.JSONParse(inputJSON, &outputJSON, &outputLen)
 		verified := verifyJSONParseOutput(outputJSON)
 
 		fmt.Printf("verify= %d\n", boolToInt(verified))
@@ -56,7 +57,7 @@ func main() {
 	for i := uint64(0); i < *iterations; i++ {
 		var outputJSON []byte
 		var outputLen int
-		workload_json_parse(inputJSON, &outputJSON, &outputLen)
+		goworkloads.JSONParse(inputJSON, &outputJSON, &outputLen)
 	}
 }
 

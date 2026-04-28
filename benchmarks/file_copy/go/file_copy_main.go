@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"realistic-energy/benchmarks/goworkloads"
 )
 
 const (
@@ -67,10 +68,10 @@ func main() {
 			os.Exit(1)
 		}
 
-		workload_file_copy(dst, inputBuffer)
+		goworkloads.FileCopy(dst, inputBuffer)
 		_ = dst.Close()
 
-		verification := filesEqual(srcPath, dstPath, int(fileCopyWriteAmplification))
+		verification := filesEqual(srcPath, dstPath, int(goworkloads.FileCopyWriteAmplification))
 
 		fmt.Printf("verify= %d\n", boolToInt(verification))
 
@@ -87,7 +88,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		workload_file_copy(dst, inputBuffer)
+		goworkloads.FileCopy(dst, inputBuffer)
 		_ = dst.Close()
 	}
 }
