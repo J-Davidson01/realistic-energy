@@ -1,4 +1,4 @@
-#include "json_parse.h"
+#include "../../workloads/c/json_parse.h"
 
 #include <stdio.h>
 #include <stdlib.h>

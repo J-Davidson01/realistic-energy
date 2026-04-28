@@ -1,7 +1,7 @@
 import Pkg
 Pkg.activate(@__DIR__)
 
-include("file_copy_workload.jl")
+include("../../workloads/julia/file_copy_workload.jl")
 
 function parse_args(args)
     dataset = "../../../datasets/file_copy/1048576"

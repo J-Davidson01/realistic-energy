@@ -1,8 +1,8 @@
 module PipelineE2EWorkload
 
-include("../../file_copy/julia/file_copy_workload.jl")
-include("../../sha256/julia/sha256_workload.jl")
-include("../../json_parse/julia/json_parse_workload.jl")
+include("file_copy_workload.jl")
+include("sha256_workload.jl")
+include("json_parse_workload.jl")
 
 const pipeline_e2e_sink = Ref{UInt8}(0)
 

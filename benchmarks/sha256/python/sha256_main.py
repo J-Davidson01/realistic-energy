@@ -4,7 +4,7 @@ from pathlib import Path
 import hmac
 import hashlib
 
-from sha256_workload import workload_sha256
+from benchmarks.workloads.python.sha256_workload import workload_sha256
 
 def read_file(file_path: Path) -> bytes:
     return file_path.read_bytes()

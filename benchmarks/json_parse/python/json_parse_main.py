@@ -3,7 +3,7 @@ import argparse
 import json
 from pathlib import Path
 
-from json_parse_workload import workload_json_parse
+from benchmarks.workloads.python.json_parse_workload import workload_json_parse
 
 def read_file(file_path: Path) -> str:
     return file_path.read_text(encoding="utf-8")

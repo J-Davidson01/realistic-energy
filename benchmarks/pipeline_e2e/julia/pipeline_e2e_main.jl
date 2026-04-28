@@ -1,7 +1,7 @@
 import Pkg
 Pkg.activate(@__DIR__)
 
-include("pipeline_e2e_workload.jl")
+include("../../workloads/julia/pipeline_e2e_workload.jl")
 
 using JSON
 
