@@ -8,7 +8,7 @@ find_package(OpenSSL REQUIRED)
 
 add_executable(sha256_c
     sha256_main.c
-    sha256_workload.c
+    ../../workloads/c/sha256_workload.c
 )
 
 target_include_directories(sha256_c PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

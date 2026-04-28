@@ -3,10 +3,8 @@ import argparse
 import sys
 from pathlib import Path
 
-BENCHMARKS_DIR = Path(__file__).resolve().parents[2]
-sys.path.append(str(BENCHMARKS_DIR / "file_copy" / "python"))
-sys.path.append(str(BENCHMARKS_DIR / "sha256" / "python"))
-sys.path.append(str(BENCHMARKS_DIR / "json_parse" / "python"))
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT))
 
 from benchmarks.workloads.python.file_copy_workload import FILE_COPY_WRITE_AMPLIFICATION
 from benchmarks.workloads.python.json_parse_workload import workload_json_parse

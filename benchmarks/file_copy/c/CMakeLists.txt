@@ -6,7 +6,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 add_executable(file_copy_c
     file_copy_main.c
-    file_copy_workload.c
+    ../../workloads/c/file_copy_workload.c
 )
 
 target_compile_options(file_copy_c PRIVATE -O3 -march=native)
