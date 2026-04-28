@@ -6,7 +6,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 add_executable(json_parse_c
     json_parse_main.c
-    json_parse_workload.c
+    ../../workloads/c/json_parse_workload.c
 )
 
 target_include_directories(json_parse_c PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

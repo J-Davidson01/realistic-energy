@@ -6,17 +6,15 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 add_executable(pipeline_e2e_c
     pipeline_e2e_main.c
-    pipeline_e2e_workload.c
-    ../../json_parse/c/json_parse_workload.c
-    ../../sha256/c/sha256_workload.c
-    ../../file_copy/c/file_copy_workload.c
+    ../../workloads/c/pipeline_e2e_workload.c
+    ../../workloads/c/json_parse_workload.c
+    ../../workloads/c/sha256_workload.c
+    ../../workloads/c/file_copy_workload.c
 )
 
 target_include_directories(pipeline_e2e_c PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ../../json_parse/c
-    ../../sha256/c
-    ../../file_copy/c
+    ../../workloads/c
 )
 
 find_package(PkgConfig REQUIRED)
