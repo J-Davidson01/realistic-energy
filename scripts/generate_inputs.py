@@ -158,7 +158,7 @@ def main():
     parser.add_argument("--min-size", type=int, default=64, help="Minimum size of the buffer (in bytes)")
     parser.add_argument("--max-size", type=int, default=1024 * 1024 * 512, help="Maximum size of the buffer (in bytes)")
     parser.add_argument("--seed", type=int, default=12345, help="Seed for random number generation")
-    parser.add_argument("--benchmarks", type=str, default="sha256,json_parse,file_copy,pipeline_e2e", help="Comma separated benchmarks")
+    parser.add_argument("--benchmarks", type=str, default="sha256,json_parse,file_copy,pipeline_e2e,pipeline_e2e_stream", help="Comma separated benchmarks")
     parser.add_argument("--out-root", type=str, default="datasets", help="Root directory for generated inputs")
     parser.add_argument("--block-size", type=int, default=4 * 1024 * 1024, help="Block size for repeated binary data generation")
 
@@ -195,6 +195,9 @@ def main():
             elif bench == "pipeline_e2e":
                 write_pipeline_e2e(base_dir, size)
                 print(f"Generated pipeline_e2e placeholder dataset of size {size} bytes")
+            elif bench == "pipeline_e2e_stream":
+                write_pipeline_e2e(base_dir, size)
+                print(f"Generated pipeline_e2e_stream placeholder dataset of size {size} bytes")
             else:
                 print(f"Skipping unsupported benchmark: {bench}")
                 continue
