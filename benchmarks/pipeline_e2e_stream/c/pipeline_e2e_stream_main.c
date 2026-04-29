@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <libgen.h>
 #include <cjson/cJSON.h>
+#include <time.h>
 
 #ifndef DEFAULT_JSON_DATASET_DIR
 #define DEFAULT_JSON_DATASET_DIR "../../../datasets/json_parse/1048576"
@@ -153,18 +154,17 @@ static pipeline_chunk_t *build_json_chunks(
     size_t max_chunk_input_len = 0;
     size_t chunk_index = 0;
 
-    for (int start = 0; start < total_items; start += (int)chunk_items) {
-        int end = start + (int)chunk_items;
-        if (end > total_items) {
-            end = total_items;
-        }
+    cJSON *item = items->child;
 
+    while (item != NULL) {
         cJSON *chunk_root = cJSON_CreateObject();
         cJSON *chunk_items_array = cJSON_CreateArray();
 
-        for (int i = start; i < end; i++) {
-            cJSON *item = cJSON_GetArrayItem(items, i);
+        size_t items_in_chunk = 0;
+        while (item != NULL && items_in_chunk < chunk_items) {
             cJSON_AddItemToArray(chunk_items_array, cJSON_Duplicate(item, 1));
+            item = item->next;
+            items_in_chunk++;
         }
 
         cJSON_AddItemToObject(chunk_root, "items", chunk_items_array);
@@ -202,10 +202,13 @@ static bool file_equals_streamed_chunks(
     const pipeline_chunk_t *chunks,
     size_t chunk_count
 ) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
+    size_t file_len = 0;
+    unsigned char *file_bytes = read_file(path, &file_len);
+    if (!file_bytes) {
         return false;
     }
+
+    size_t offset = 0;
 
     for (size_t i = 0; i < chunk_count; i++) {
         char *verify_json = NULL;
@@ -213,23 +216,28 @@ static bool file_equals_streamed_chunks(
 
         workload_json_parse(chunks[i].json, &verify_json, &verify_len);
 
+        size_t repeated_len = verify_len * (size_t)FILE_COPY_WRITE_AMPLIFICATION;
+        if (offset + repeated_len > file_len) {
+            free(verify_json);
+            free(file_bytes);
+            return false;
+        }
+
         for (int rep = 0; rep < FILE_COPY_WRITE_AMPLIFICATION; rep++) {
-            for (size_t j = 0; j < verify_len; j++) {
-                int c = fgetc(file);
-                if (c == EOF || (unsigned char)c != (unsigned char)verify_json[j]) {
-                    free(verify_json);
-                    fclose(file);
-                    return false;
-                }
+            if (memcmp(file_bytes + offset, verify_json, verify_len) != 0) {
+                free(verify_json);
+                free(file_bytes);
+                return false;
             }
+            offset += verify_len;
         }
 
         free(verify_json);
     }
 
-    int extra = fgetc(file);
-    fclose(file);
-    return extra == EOF;
+    bool ok = (offset == file_len);
+    free(file_bytes);
+    return ok;
 }
 
 int main(int argc, char **argv) {
@@ -289,6 +297,7 @@ int main(int argc, char **argv) {
 
     size_t chunk_count = 0;
     size_t max_chunk_input_len = 0;
+    
     pipeline_chunk_t *chunks = build_json_chunks(
         (const char *)input_json,
         chunk_items,
