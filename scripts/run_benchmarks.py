@@ -380,7 +380,7 @@ def filter_datasets_by_size(dataset_dirs: List[Path], min_size: int | None, max_
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run benchmarks and collect energy and memory usage data")
-    parser.add_argument("--benchmark", type=str, default="sha256,json_parse,file_copy,pipeline_e2e", help="Comma-separated benchmark names, e.g. sha256,json_parse,file_copy,pipeline")
+    parser.add_argument("--benchmark", type=str, default="sha256,json_parse,file_copy,pipeline_e2e,pipeline_e2e_stream", help="Comma-separated benchmark names, e.g. sha256,json_parse,file_copy,pipeline")
     parser.add_argument("--languages", type=str, default="c,go,python,julia", help="Comma-separated list of languages to run, e.g. c,go,python,julia")
     parser.add_argument("--iterations", type=int, default=25, help="Number of iterations to run each benchmark")
     parser.add_argument("--memory-interval-ms", type=float, default=10.0, help="Interval in milliseconds between memory usage samples")
@@ -392,6 +392,7 @@ def main() -> None:
     parser.add_argument("--warmup", action="store_true")
     parser.add_argument("--min-dataset-size", type=int, default=None, help="Minimum dataset size in bytes to include")
     parser.add_argument("--max-dataset-size", type=int, default=None, help="Maximum dataset size in bytes to include")
+    parser.add_argument("--chunk-items", type=int, default=1024, help="Amount of items to process in each chunk for streaming benchmarks")
     args = parser.parse_args()
 
     benchmarks = [b.strip() for b in args.benchmark.split(",") if b.strip()]
