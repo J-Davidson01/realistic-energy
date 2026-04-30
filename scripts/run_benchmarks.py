@@ -31,6 +31,7 @@ CSV_FIELDS = [
     "language",
     "size",
     "iterations",
+    "chunk_items",
     "repetition",
     "elapsed_s",
     "energy_pkg_j",
@@ -191,7 +192,7 @@ def run_verify(language: str, benchmark: str, dataset_dir: Path, chunk_items: in
     command = get_language_command(language, benchmark, dataset_dir, 1, chunk_items, verify=True)
     completed = run_command_capture(command)
 
-    cleanup_file_copy_outputs(benchmark, dataset_dir)
+    cleanup_benchmark_outputs(benchmark, dataset_dir)
 
     if completed.returncode != 0:
         print(f"[verify:{language}] stdout:\n{completed.stdout}")
@@ -252,7 +253,7 @@ def run_benchmark(
         if rapl_zones else None
     )
 
-    cleanup_file_copy_outputs(benchmark, dataset_dir)
+    cleanup_benchmark_outputs(benchmark, dataset_dir)
 
     size = int(dataset_dir.name)
 
@@ -261,6 +262,7 @@ def run_benchmark(
         "language": language,
         "size": size,
         "iterations": iterations,
+        "chunk_items": chunk_items if benchmark == "pipeline_e2e_stream" else "",
         "elapsed_s": elapsed_time_s,
         "energy_pkg_j": energy_j,
         "rss_start_bytes": mem_stats.rss_start,
@@ -368,15 +370,22 @@ def get_language_command(
 
     return command
 
-def cleanup_file_copy_outputs(benchmark: str, dataset_dir: Path) -> None:
-    if benchmark != "file_copy":
-        return
+def cleanup_benchmark_outputs(benchmark: str, dataset_dir: Path) -> None:
+    output_paths = []
 
-    output_path = dataset_dir / "output.bin"
-    try:
-        output_path.unlink()
-    except FileNotFoundError:
-        pass
+    if benchmark == "file_copy":
+        output_paths.append(dataset_dir / "output.bin")
+
+    elif benchmark in ("pipeline_e2e", "pipeline_e2e_stream"):
+        size_name = dataset_dir.name
+        datasets_root = dataset_dir.parent.parent
+        output_paths.append(datasets_root / "file_copy" / size_name / "output.bin")
+
+    for output_path in output_paths:
+        try:
+            output_path.unlink()
+        except FileNotFoundError:
+            pass
 
 def filter_datasets_by_size(dataset_dirs: List[Path], min_size: int | None, max_size: int | None) -> List[Path]:
     filtered = []
@@ -476,7 +485,7 @@ def main() -> None:
                         stderr=subprocess.DEVNULL,
                         check=False,
                     )
-                    cleanup_file_copy_outputs(benchmark, dataset_dir)
+                    cleanup_benchmark_outputs(benchmark, dataset_dir)
 
                 for repetition in range(args.repetitions):
                     print(
