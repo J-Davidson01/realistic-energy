@@ -13,6 +13,8 @@ Docker can be found and installed simply through a GUI here: [text](https://www.
 
 # Build and Test
 TODO: Describe and show how to build your code and run the tests. 
+
+--- For non native debian / linux users ---
 Step 1 | CD into main folder:
   CD into realistic-energy.
 
@@ -43,6 +45,20 @@ docker run --rm -v "%cd%":/realistic-energy realistic-energy \
 
 Rebuilding when possibly containing bad cached config after changing settings can be done by running the following:
   docker run --rm -e REBUILD=1 -v ${PWD}:/realistic-energy realistic-energy
+
+
+--- for native users ---
+Full setup and run:
+./scripts/native_run.sh --install-deps --regen --rebuild -- --verify --iterations 25 --repetitions 5
+
+Only build/setup no benchmark:
+./scripts/native_run.sh --install-deps --rebuild --no-run
+
+Run only a few languages:
+./scripts/native_run.sh -- --benchmark sha256,json_parse --languages c,go,python --iterations 50 --repetitions 3 --verify
+
+Run streaming benchmark with custom chunk-size:
+./scripts/native_run.sh -- --benchmark pipeline_e2e_stream --chunk-items 4096 --iterations 25 --repetitions 5 --verify
 
 # Contribute
 TODO: Explain how other users and developers can contribute to make your code better. 
