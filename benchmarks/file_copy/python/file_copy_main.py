@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 import argparse
 from pathlib import Path
+import sys
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT))
 
 from benchmarks.workloads.python.file_copy_workload import workload_file_copy, FILE_COPY_WRITE_AMPLIFICATION
 

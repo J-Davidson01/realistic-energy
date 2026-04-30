@@ -57,7 +57,7 @@ function main()
         output_json = Ref("")
         output_len = Ref(0)
 
-        workload_json_parse(input_json_text, output_json, output_len)
+        JsonParseWorkload.workload_json_parse(input_json_text, output_json, output_len)
         verified = (verify_json_parse_output(output_json[]) == 1)
 
         println("verify= ", verified ? 1 : 0)
@@ -68,7 +68,7 @@ function main()
         output_json = Ref("")
         output_len = Ref(0)
 
-        workload_json_parse(input_json_text, output_json, output_len)
+        JsonParseWorkload.workload_json_parse(input_json_text, output_json, output_len)
     end
 end
 

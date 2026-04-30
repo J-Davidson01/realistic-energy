@@ -187,8 +187,8 @@ def format_command(template: list[str], dataset_dir: Path, iterations: int, veri
 def run_command_capture(command: List[str]) -> subprocess.CompletedProcess:
     return subprocess.run(command, capture_output=True, text=True)
 
-def run_verify(language: str, benchmark: str, dataset_dir: Path) -> bool:
-    command = get_language_command(language, benchmark, dataset_dir, 1, verify=True)
+def run_verify(language: str, benchmark: str, dataset_dir: Path, chunk_items: int) -> bool:
+    command = get_language_command(language, benchmark, dataset_dir, 1, chunk_items, verify=True)
     completed = run_command_capture(command)
 
     cleanup_file_copy_outputs(benchmark, dataset_dir)
@@ -205,10 +205,11 @@ def run_benchmark(
     benchmark: str,
     dataset_dir: Path,
     iterations: int,
+    chunk_items: int,
     memory_interval_s: float,
     rapl_zones: List[RaplZone]
 ) -> Dict[str, object]:
-    command = get_language_command(language, benchmark, dataset_dir, iterations, verify=False)
+    command = get_language_command(language, benchmark, dataset_dir, iterations, chunk_items, verify=False)
 
     start_snapshot = snapshot_rapl(rapl_zones) if rapl_zones else {}
     t0 = time.perf_counter()
@@ -318,7 +319,14 @@ def detect_languages(benchmark: str) -> list[str]:
 
     return languages
 
-def get_language_command(language: str, benchmark: str, dataset_dir: Path, iterations: int, verify: bool = False) -> list[str]:
+def get_language_command(
+    language: str,
+    benchmark: str,
+    dataset_dir: Path,
+    iterations: int,
+    chunk_items: int,
+    verify: bool = False
+) -> list[str]:
     benchmark_root = BENCHMARKS_ROOT / benchmark
 
     if language == "c":
@@ -351,6 +359,9 @@ def get_language_command(language: str, benchmark: str, dataset_dir: Path, itera
         ]
     else:
         raise ValueError(f"Unsupported language: {language}")
+
+    if benchmark == "pipeline_e2e_stream":
+        command.extend(["--chunk-items", str(chunk_items)])
 
     if verify:
         command.append("--verify")
@@ -451,14 +462,14 @@ def main() -> None:
             if args.verify:
                 verify_dataset = dataset_dirs[0]
                 print(f"Running verification for {language} on {benchmark} dataset {verify_dataset.name}...")
-                if not run_verify(language, benchmark, verify_dataset):
+                if not run_verify(language, benchmark, verify_dataset, args.chunk_items):
                     print(f"Verification failed for {language}. Skipping benchmark runs for this language.")
                     continue
                 print(f"Verification succeeded for {language}. Proceeding with benchmark runs.")
 
             for dataset_dir in dataset_dirs:
                 if args.warmup:
-                    warmup_command = get_language_command(language, benchmark, dataset_dir, 1, verify=False)
+                    warmup_command = get_language_command(language, benchmark, dataset_dir, 1, args.chunk_items, verify=False)
                     subprocess.run(
                         warmup_command,
                         stdout=subprocess.DEVNULL,
@@ -478,6 +489,7 @@ def main() -> None:
                         benchmark=benchmark,
                         dataset_dir=dataset_dir,
                         iterations=args.iterations,
+                        chunk_items=args.chunk_items,
                         memory_interval_s=memory_interval_s,
                         rapl_zones=rapl_zones,
                     )

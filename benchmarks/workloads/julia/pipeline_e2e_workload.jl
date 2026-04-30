@@ -24,16 +24,19 @@ function workload_pipeline_e2e!(
     transformed_len = output_len[]
     transformed_bytes = Vector{UInt8}(codeunits(transformed_json))
 
+    ciphertext_view = @view ciphertext[1:transformed_len]
+    decrypted_view = @view decrypted[1:transformed_len]
+
     SHA256Workload.workload_sha256!(
         transformed_bytes,
         key_hmac,
         key_xor,
-        ciphertext,
-        decrypted,
+        ciphertext_view,
+        decrypted_view,
         out_hmac,
     )
 
-    FileCopyWorkload.workload_file_copy!(dst, @view decrypted[1:transformed_len])
+    FileCopyWorkload.workload_file_copy!(dst, decrypted_view)
 
     pipeline_e2e_sink[] ⊻= UInt8(transformed_len & 0xff)
     pipeline_e2e_sink[] ⊻= decrypted[1]

@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import sys
 from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT))
 
 from benchmarks.workloads.python.json_parse_workload import workload_json_parse
 

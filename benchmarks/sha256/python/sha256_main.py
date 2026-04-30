@@ -3,6 +3,10 @@ import argparse
 from pathlib import Path
 import hmac
 import hashlib
+import sys
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT))
 
 from benchmarks.workloads.python.sha256_workload import workload_sha256
 
@@ -38,7 +42,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", default="../../../datasets/sha256/1048576")
     parser.add_argument("--iterations", type=int, default=100000)
-    parser.add_argument("--verify", default=False)
+    parser.add_argument("--verify", action="store_true")
     args = parser.parse_args()
     
     dataset_dir = Path(args.dataset)

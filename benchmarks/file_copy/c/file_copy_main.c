@@ -84,35 +84,30 @@ static bool has_flag(int argc, char **argv, const char *name) {
     return false;
 }
 
-static bool files_equal(const char *a_path, const char *b_path) {
-    FILE *a = fopen(a_path, "rb");
-    FILE *b = fopen(b_path, "rb");
-
-    if (!a || !b) {
-        if (a) fclose(a);
-        if (b) fclose(b);
+static bool file_equals_amplified_buffer(
+    const char *path,
+    const unsigned char *buffer,
+    size_t buffer_len,
+    int amplification
+) {
+    FILE *file = fopen(path, "rb");
+    if (!file) {
         return false;
     }
 
-    int ok = 1;
-
-    while (1) {
-        int ca = fgetc(a);
-        int cb = fgetc(b);
-
-        if (ca != cb) {
-            ok = 0;
-            break;
-        }
-
-        if (ca == EOF) {
-            break;
+    for (int i = 0; i < amplification; i++) {
+        for (size_t j = 0; j < buffer_len; j++) {
+            int c = fgetc(file);
+            if (c == EOF || (unsigned char)c != buffer[j]) {
+                fclose(file);
+                return false;
+            }
         }
     }
 
-    fclose(a);
-    fclose(b);
-    return ok != 0;
+    int extra = fgetc(file);
+    fclose(file);
+    return extra == EOF;
 }
 
 int main(int argc, char **argv) {
@@ -134,23 +129,28 @@ int main(int argc, char **argv) {
     }
 
     if (verify) {
-        int dst_fd = open(dst_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-        if (dst_fd < 0) {
-            perror("Failed to open destination file");
-            free(input_buffer);
-            return 1;
-        }
-
-        workload_file_copy(dst_fd, input_buffer, input_len);
-        close(dst_fd);
-
-        int verification = files_equal(src_path, dst_path);
-
-        printf("verify= %d\n", verification ? 1 : 0);
-
+    int dst_fd = open(dst_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (dst_fd < 0) {
+        perror("Failed to open destination file");
         free(input_buffer);
-        return verification ? 0 : 1;
+        return 1;
     }
+
+    workload_file_copy(dst_fd, input_buffer, input_len);
+    close(dst_fd);
+
+    int verification = file_equals_amplified_buffer(
+        dst_path,
+        input_buffer,
+        input_len,
+        FILE_COPY_WRITE_AMPLIFICATION
+    );
+
+    printf("verify= %d\n", verification ? 1 : 0);
+
+    free(input_buffer);
+    return verification ? 0 : 1;
+}
 
     for (size_t i = 0; i < iterations; i++) {
         int dst_fd = open(dst_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
