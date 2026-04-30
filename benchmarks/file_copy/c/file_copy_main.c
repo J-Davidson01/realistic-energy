@@ -15,6 +15,10 @@
 #define DEFAULT_ITERATIONS 1000000UL
 #endif
 
+#ifndef FILE_COPY_WRITE_AMPLIFICATION
+#define FILE_COPY_WRITE_AMPLIFICATION 8
+#endif
+
 static unsigned char *read_file(const char *path, size_t *out_len) {
     FILE *file = fopen(path, "rb");
     if (!file) {
