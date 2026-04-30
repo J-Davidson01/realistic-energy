@@ -3,6 +3,12 @@
 
 #include <stddef.h>
 
+void write_all(
+    int fd,
+    const unsigned char *buffer,
+    size_t len
+);
+
 size_t workload_file_copy(
     int dst_fd,
     const unsigned char *buffer,
