@@ -225,7 +225,23 @@ find benchmarks -type f -name CMakeLists.txt 2>/dev/null | while read -r cmakefi
 done
 
 # -----------------------------
-# 6) Build Go workloads
+# 6) Prepare Go module
+# -----------------------------
+if command -v go >/dev/null 2>&1; then
+  echo "[native] Preparing Go module..."
+
+  if [[ ! -f go.mod ]]; then
+    echo "  go.mod not found; creating root module realistic-energy"
+    go mod init realistic-energy
+  fi
+
+  go mod tidy
+else
+  echo "[native] Go not found; skipping Go module setup."
+fi
+
+# -----------------------------
+# 7) Build Go workloads
 # -----------------------------
 echo "[native] Building Go workloads..."
 
@@ -243,7 +259,7 @@ find benchmarks -type f -name '*_main.go' 2>/dev/null | while read -r mainfile; 
 done
 
 # -----------------------------
-# 7) RAPL visibility check
+# 8) RAPL visibility check
 # -----------------------------
 echo "[native] Checking RAPL zones..."
 
@@ -263,7 +279,7 @@ fi
 echo "[native] Setup complete."
 
 # -----------------------------
-# 8) Run benchmarks
+# 9) Run benchmarks
 # -----------------------------
 if [[ "$RUN_BENCHMARKS" == "1" ]]; then
   echo "[native] Running benchmarks..."
