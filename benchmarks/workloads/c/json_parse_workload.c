@@ -17,25 +17,25 @@ static void uppercase_inplace(char *str) {
 
 int workload_json_parse(const char *input_json, char **output_json, size_t *output_len) {
     cJSON *root = cJSON_Parse(input_json);
-
+    
     cJSON *items = cJSON_GetObjectItemCaseSensitive(root, "items");
     cJSON *item = NULL;
 
     cJSON_ArrayForEach(item, items) {
         cJSON *id = cJSON_GetObjectItemCaseSensitive(item, "id");
-        id->valueint += 1;
+        id->valueint += 1; 
 
         cJSON *active = cJSON_GetObjectItemCaseSensitive(item, "active");
-        active->valueint = !active->valueint;
+        active->valueint = !active->valueint; 
 
         cJSON *name = cJSON_GetObjectItemCaseSensitive(item, "name");
-        uppercase_inplace(name->valuestring);
+        char *upper = strdup(name->valuestring);
+        uppercase_inplace(upper);
+        cJSON_ReplaceItemInObjectCaseSensitive(item, "name", cJSON_CreateString(upper));
 
-        cJSON_AddNumberToObject(
-            item,
-            "name_length",
-            (double)strlen(name->valuestring)
-        );
+        cJSON_AddNumberToObject(item, "name_length", (double)strlen(upper));
+
+        free(upper);
     }
 
     char *serialized = cJSON_PrintUnformatted(root);
