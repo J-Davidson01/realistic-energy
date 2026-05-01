@@ -29,8 +29,9 @@ static unsigned char* read_file(const char* path, size_t *out_len) {
         }
 
         rewind(file);
-        unsigned char *buffer = malloc(file_size);
-        
+        unsigned char *buffer = malloc((size_t)file_size + 1);
+        buffer[file_size] = '\0'; 
+
         if (!buffer) {
             perror("Failed to allocate buffer");
             fclose(file);
