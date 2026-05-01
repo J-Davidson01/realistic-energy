@@ -23,8 +23,8 @@ Setup options:
   --regen                 Regenerate datasets
   --rebuild               Rebuild C/Go binaries
   --benchmarks LIST       Benchmarks to generate/build/run
-  --min-size BYTES        Minimum dataset size
-  --max-size BYTES        Maximum dataset size
+  --min-dataset-size BYTES        Minimum dataset size
+  --max-dataset-size BYTES        Maximum dataset size
   --no-run                Only setup/build/generate, do not run benchmarks
   --julia-version VER     Julia version to install if missing
   -h, --help              Show this help
@@ -58,11 +58,11 @@ while [[ $# -gt 0 ]]; do
       BENCHMARKS="$2"
       shift 2
       ;;
-    --min-size)
+    --min-dataset-size)
       MIN_SIZE="$2"
       shift 2
       ;;
-    --max-size)
+    --max-dataset-size)
       MAX_SIZE="$2"
       shift 2
       ;;
@@ -183,8 +183,8 @@ if [[ "$REGEN" == "1" || "$need_gen" == "1" ]]; then
   echo "[native] Generating datasets..."
   python scripts/generate_inputs.py \
     --benchmarks "$BENCHMARKS" \
-    --min-size "$MIN_SIZE" \
-    --max-size "$MAX_SIZE" \
+    --min-dataset-size "$MIN_SIZE" \
+    --max-dataset-size "$MAX_SIZE" \
     --out-root datasets
 else
   echo "[native] Datasets already present; skipping generation."
