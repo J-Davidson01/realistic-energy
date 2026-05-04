@@ -25,9 +25,9 @@ PYTHON_VENV=".venv"
 DATASETS_OUT_ROOT="/var/scratch/$USER/realistic-energy/datasets"
 RESULTS_OUT_ROOT="/var/scratch/$USER/realistic-energy/results"
 
-OPENSSL_ROOT="/var/scratch/$USER/realistic-energy/tools/openssl"
-OPENSSL_INCLUDE_DIR="$OPENSSL_ROOT/include"
-OPENSSL_CRYPTO_LIBRARY="$OPENSSL_ROOT/lib/libcrypto.a"
+OPENSSL_ROOT="/var/scratch/${USER}/realistic-energy/tools/openssl"
+OPENSSL_INCLUDE_DIR="${OPENSSL_ROOT}/include"
+OPENSSL_CRYPTO_LIBRARY="${OPENSSL_ROOT}/lib/libcrypto.a"
 
 GO_ROOT="/var/scratch/$USER/realistic-energy/tools/go"
 GO_VERSION="1.25.0"
@@ -461,8 +461,9 @@ else
       mkdir -p "$build_dir"
       cmake -S "$dir" -B "$build_dir" \
         -DCMAKE_BUILD_TYPE=Release \
-        -DOPENSSL_INCLUDE_DIR=/usr/include \
-        -DOPENSSL_CRYPTO_LIBRARY=/usr/lib64/libcrypto.so
+        -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT" \
+        -DOPENSSL_INCLUDE_DIR="$OPENSSL_INCLUDE_DIR" \
+        -DOPENSSL_CRYPTO_LIBRARY="$OPENSSL_CRYPTO_LIBRARY"
       cmake --build "$build_dir" -j"$(nproc)"
     else
       echo "  (skip) $dir already built"
