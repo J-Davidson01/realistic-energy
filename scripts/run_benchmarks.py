@@ -10,7 +10,7 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 from datetime import datetime
 import socket
 import platform
@@ -212,7 +212,7 @@ def discover_datasets(benchmark: str, datasets_root: Path) -> List[Path]:
     dirst.sort(key=lambda d: int(d.name))
     return dirst
 
-def format_command(template: list[str], dataset_dir: Path, iterations: int, verify: bool = False) -> list[str]:
+def format_command(template: List[str], dataset_dir: Path, iterations: int, verify: bool = False) -> List[str]:
     command = [
         part.format(dataset=str(dataset_dir), iterations=str(iterations))
         for part in template
@@ -347,7 +347,7 @@ def make_timestamped_results_path(path: Path) -> Path:
         return path.with_name(f"{path.stem}_{timestamp}{path.suffix}")
     return Path(f"{path}_{timestamp}")
 
-def detect_languages(benchmark: str) -> list[str]:
+def detect_languages(benchmark: str) -> List[str]:
     benchmark_root = BENCHMARKS_ROOT / benchmark
     languages = []
 
@@ -372,7 +372,7 @@ def get_language_command(
     iterations: int,
     chunk_items: int,
     verify: bool = False
-) -> list[str]:
+) -> List[str]:
     benchmark_root = BENCHMARKS_ROOT / benchmark
 
     if language == "c":
@@ -442,7 +442,7 @@ def filter_datasets_by_size(dataset_dirs: List[Path], min_size: int | None, max_
         filtered.append(d)
     return filtered
 
-def get_git_commit() -> str | None:
+def get_git_commit() -> Optional[str]:
     try:
         completed = subprocess.run(
             ["git", "rev-parse", "HEAD"],

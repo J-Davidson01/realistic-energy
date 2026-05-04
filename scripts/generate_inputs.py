@@ -89,7 +89,7 @@ def make_json_item(seed: int, index: int) -> dict:
         "category": deterministic_string(seed + 2000, index, 4),
     }
 
-def build_json_item_block(seed: int, block_items: int = 4096) -> list[bytes]:
+def build_json_item_block(seed: int, block_items: int = 4096):
     items = []
     for index in range(block_items):
         item = make_json_item(seed, index)
