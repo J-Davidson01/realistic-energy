@@ -222,7 +222,7 @@ def format_command(template: List[str], dataset_dir: Path, iterations: int, veri
     return command
 
 def run_command_capture(command: List[str]) -> subprocess.CompletedProcess:
-    return subprocess.run(command, capture_output=True, text=True)
+    return subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
 
 def run_verify(language: str, benchmark: str, dataset_dir: Path, chunk_items: int) -> bool:
     command = get_language_command(language, benchmark, dataset_dir, 1, chunk_items, verify=True)
@@ -446,15 +446,17 @@ def get_git_commit() -> Optional[str]:
     try:
         completed = subprocess.run(
             ["git", "rev-parse", "HEAD"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
+            cwd=str(PROJECT_ROOT),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
             check=False,
         )
         if completed.returncode == 0:
             return completed.stdout.strip()
     except OSError:
         pass
+
     return None
 
 def main() -> None:
