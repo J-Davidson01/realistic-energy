@@ -21,8 +21,12 @@ target_include_directories(pipeline_e2e_c PRIVATE
 
 find_package(OpenSSL REQUIRED)
 
+target_include_directories(pipeline_e2e_c PRIVATE
+    ${OPENSSL_INCLUDE_DIR}
+)
+
 target_link_libraries(pipeline_e2e_c PRIVATE
-    OpenSSL::Crypto
+    ${OPENSSL_CRYPTO_LIBRARY}
 )
 
 target_compile_options(pipeline_e2e_c PRIVATE -O3 -march=native)

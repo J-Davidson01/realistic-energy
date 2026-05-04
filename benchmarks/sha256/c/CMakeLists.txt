@@ -12,4 +12,11 @@ add_executable(sha256_c
 )
 
 target_include_directories(sha256_c PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(sha256_c PRIVATE OpenSSL::Crypto)
+
+target_include_directories(sha256_c PRIVATE
+    ${OPENSSL_INCLUDE_DIR}
+)
+
+target_link_libraries(sha256_c PRIVATE
+    ${OPENSSL_CRYPTO_LIBRARY}
+)
