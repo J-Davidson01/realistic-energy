@@ -22,20 +22,17 @@ SETUP_TOOLS="0"
 RUN_BENCHMARKS="1"
 PYTHON_VENV=".venv"
 
-DATASETS_OUT_ROOT="/var/scratch/$USER/realistic-energy/datasets"
-RESULTS_OUT_ROOT="/var/scratch/$USER/realistic-energy/results"
+DATASETS_OUT_ROOT="/var/scratch/${USER}/realistic-energy/datasets"
+RESULTS_OUT_ROOT="/var/scratch/${USER}/realistic-energy/results"
 
-TOOLS_ROOT="/var/scratch/${USER}/realistic-energy/tools"
+TOOLS_ROOT="${HOME}/.local/realistic-energy/tools"
 GO_ROOT="${TOOLS_ROOT}/go"
 
 OPENSSL_ROOT="${TOOLS_ROOT}/openssl"
 OPENSSL_INCLUDE_DIR="${OPENSSL_ROOT}/include"
 OPENSSL_CRYPTO_LIBRARY="${OPENSSL_ROOT}/lib/libcrypto.a"
 
-GO_ROOT="/var/scratch/$USER/realistic-energy/tools/go"
-GO_VERSION="1.25.0"
-GO_TARBALL="go${GO_VERSION}.linux-amd64.tar.gz"
-GO_URL="https://go.dev/dl/${GO_TARBALL}"
+GO_ROOT="${TOOLS_ROOT}/go"
 
 JULIA_MODULE="julia/1.11.4"
 CMAKE_MODULE="cmake/3.24.2"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TOOLS_ROOT="/var/scratch/${USER}/realistic-energy/tools"
+TOOLS_ROOT="${HOME}/.local/realistic-energy/tools"
 SRC_ROOT="${TOOLS_ROOT}/src"
 
 GO_VERSION="1.25.0"
