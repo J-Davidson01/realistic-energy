@@ -25,7 +25,10 @@ PYTHON_VENV=".venv"
 DATASETS_OUT_ROOT="/var/scratch/$USER/realistic-energy/datasets"
 RESULTS_OUT_ROOT="/var/scratch/$USER/realistic-energy/results"
 
-OPENSSL_ROOT="/var/scratch/${USER}/realistic-energy/tools/openssl"
+TOOLS_ROOT="/var/scratch/${USER}/realistic-energy/tools"
+GO_ROOT="${TOOLS_ROOT}/go"
+
+OPENSSL_ROOT="${TOOLS_ROOT}/openssl"
 OPENSSL_INCLUDE_DIR="${OPENSSL_ROOT}/include"
 OPENSSL_CRYPTO_LIBRARY="${OPENSSL_ROOT}/lib/libcrypto.a"
 
@@ -175,29 +178,21 @@ fi
 # -----------------------------
 # 2) Optional user-local tool setup
 # -----------------------------
-mkdir -p "$HOME/.local/bin"
-
-if [[ "$SETUP_TOOLS" == "1" ]]; then
-  if ! command -v go >/dev/null 2>&1; then
-    echo "[native] Go not found. Installing Go $GO_VERSION locally to $GO_ROOT"
-
-    tmpdir="$(mktemp -d)"
-    wget -q "$GO_URL" -O "$tmpdir/$GO_TARBALL"
-
-    rm -rf "$GO_ROOT"
-    mkdir -p "$HOME/.local"
-    tar -xzf "$tmpdir/$GO_TARBALL" -C "$HOME/.local"
-
-    rm -rf "$tmpdir"
-
-    echo "[native] Go installed locally."
-  else
-    echo "[native] Go already available: $(go version)"
-  fi
+if [[ -x "$GO_ROOT/bin/go" ]]; then
+  export PATH="$GO_ROOT/bin:$PATH"
+else
+  echo "[native] Go not found at $GO_ROOT/bin/go"
+  echo "[native] Run first:"
+  echo "  prun -v -1 -np 1 ./scripts/das5_setup_tools.sh"
 fi
 
-if [[ -d "$GO_ROOT/bin" ]]; then
-  export PATH="$GO_ROOT/bin:$PATH"
+if [[ ! -f "$OPENSSL_INCLUDE_DIR/openssl/evp.h" || ! -f "$OPENSSL_CRYPTO_LIBRARY" ]]; then
+  echo "[native] OpenSSL scratch install not found."
+  echo "[native] Expected:"
+  echo "  $OPENSSL_INCLUDE_DIR/openssl/evp.h"
+  echo "  $OPENSSL_CRYPTO_LIBRARY"
+  echo "[native] Run first:"
+  echo "  prun -v -1 -np 1 ./scripts/das5_setup_tools.sh"
 fi
 
 # -----------------------------
