@@ -16,7 +16,7 @@ add_executable(pipeline_e2e_stream_c
 target_include_directories(pipeline_e2e_stream_c PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ../../workloads/c
-    ../../workloads/c/third_party
+    ../../workloads/c/third_party/cjson
 )
 
 find_package(OpenSSL REQUIRED)
