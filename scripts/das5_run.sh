@@ -25,6 +25,10 @@ PYTHON_VENV=".venv"
 DATASETS_OUT_ROOT="/var/scratch/$USER/realistic-energy/datasets"
 RESULTS_OUT_ROOT="/var/scratch/$USER/realistic-energy/results"
 
+OPENSSL_ROOT="/var/scratch/$USER/realistic-energy/tools/openssl"
+OPENSSL_INCLUDE_DIR="$OPENSSL_ROOT/include"
+OPENSSL_CRYPTO_LIBRARY="$OPENSSL_ROOT/lib/libcrypto.a"
+
 GO_ROOT="/var/scratch/$USER/realistic-energy/tools/go"
 GO_VERSION="1.25.0"
 GO_TARBALL="go${GO_VERSION}.linux-amd64.tar.gz"
