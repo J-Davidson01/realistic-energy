@@ -396,22 +396,24 @@ done
 need_gen=0
 
 for b in ${BENCHMARKS//,/ }; do
-  if [[ ! -d "datasets/$b" ]]; then
+  bench_dir="$DATASETS_OUT_ROOT/$b"
+
+  if [[ ! -d "$bench_dir" ]]; then
     need_gen=1
-  elif ! find "datasets/$b" -mindepth 1 -maxdepth 1 -type d | grep -q .; then
+  elif ! find "$bench_dir" -mindepth 1 -maxdepth 1 -type d | grep -q .; then
     need_gen=1
   fi
 done
 
 if [[ "$REGEN" == "1" || "$need_gen" == "1" ]]; then
-  echo "[native] Generating datasets..."
+  echo "[native] Generating datasets in $DATASETS_OUT_ROOT..."
   python scripts/generate_inputs.py \
     --benchmarks "$BENCHMARKS" \
     --min-size "$MIN_SIZE" \
     --max-size "$MAX_SIZE" \
     --out-root "$DATASETS_OUT_ROOT"
 else
-  echo "[native] Datasets already present; skipping generation."
+  echo "[native] Datasets already present in $DATASETS_OUT_ROOT; skipping generation."
 fi
 
 # -----------------------------
@@ -453,7 +455,10 @@ else
     if [[ "$REBUILD" == "1" || ! -d "$build_dir" ]]; then
       echo "  building C workload in $dir"
       mkdir -p "$build_dir"
-      cmake -S "$dir" -B "$build_dir" -DCMAKE_BUILD_TYPE=Release
+      cmake -S "$dir" -B "$build_dir" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DOPENSSL_INCLUDE_DIR=/usr/include \
+        -DOPENSSL_CRYPTO_LIBRARY=/usr/lib64/libcrypto.so
       cmake --build "$build_dir" -j"$(nproc)"
     else
       echo "  (skip) $dir already built"
