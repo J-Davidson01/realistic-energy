@@ -20,6 +20,7 @@ target_include_directories(pipeline_e2e_c PRIVATE
 )
 
 find_package(OpenSSL REQUIRED)
+find_package(Threads REQUIRED)
 
 target_include_directories(pipeline_e2e_c PRIVATE
     ${OPENSSL_INCLUDE_DIR}
@@ -27,6 +28,8 @@ target_include_directories(pipeline_e2e_c PRIVATE
 
 target_link_libraries(pipeline_e2e_c PRIVATE
     ${OPENSSL_CRYPTO_LIBRARY}
+    Threads::Threads
+    ${CMAKE_DL_LIBS}
 )
 
 target_compile_options(pipeline_e2e_c PRIVATE -O3 -march=native)

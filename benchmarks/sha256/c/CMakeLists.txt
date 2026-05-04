@@ -5,6 +5,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 find_package(OpenSSL REQUIRED)
+find_package(Threads REQUIRED)
 
 add_executable(sha256_c
     sha256_main.c
@@ -19,4 +20,6 @@ target_include_directories(sha256_c PRIVATE
 
 target_link_libraries(sha256_c PRIVATE
     ${OPENSSL_CRYPTO_LIBRARY}
+    Threads::Threads
+    ${CMAKE_DL_LIBS}
 )

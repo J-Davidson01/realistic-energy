@@ -10,23 +10,26 @@ add_executable(pipeline_e2e_stream_c
     ../../workloads/c/json_parse_workload.c
     ../../workloads/c/sha256_workload.c
     ../../workloads/c/file_copy_workload.c
-    ../../workloads/c/third_party/cjson/cJSON.c
+    ../../workloads/c/third_party/cJSON.c
 )
 
 target_include_directories(pipeline_e2e_stream_c PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ../../workloads/c
-    ../../workloads/c/third_party/cjson
+    ../../workloads/c/third_party
 )
 
 find_package(OpenSSL REQUIRED)
+find_package(Threads REQUIRED)
 
-target_include_directories(pipeline_e2e_c PRIVATE
+target_include_directories(pipeline_e2e_stream_c PRIVATE
     ${OPENSSL_INCLUDE_DIR}
 )
 
-target_link_libraries(pipeline_e2e_c PRIVATE
+target_link_libraries(pipeline_e2e_stream_c PRIVATE
     ${OPENSSL_CRYPTO_LIBRARY}
+    Threads::Threads
+    ${CMAKE_DL_LIBS}
 )
 
 target_compile_options(pipeline_e2e_stream_c PRIVATE -O3 -march=native)
