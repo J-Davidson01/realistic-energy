@@ -35,6 +35,9 @@ CSV_FIELDS = [
     "repetition",
     "elapsed_s",
     "energy_pkg_j",
+    "energy_core_j",
+    "energy_dram_j",
+    "energy_other_j",
     "rss_start_bytes",
     "rss_peak_bytes",
     "rss_end_bytes",
@@ -51,9 +54,10 @@ CSV_FIELDS = [
 
 @dataclass
 class RaplZone:
-    name: str
+    key: str
+    domain: str
     path: Path
-    energy_uj_path : Path
+    energy_uj_path: Path
     max_energy_range_uj_path: Path
 
 @dataclass
@@ -66,34 +70,39 @@ class MemoryStats:
 # =======
 # Energy (RAPL) monitoring functions
 
-def discover_package_rapl_zones(powercap_root = Path("/sys/class/powercap")) -> List[RaplZone]:
+def discover_rapl_zones(powercap_root=Path("/sys/class/powercap")) -> List[RaplZone]:
     zones: List[RaplZone] = []
 
     if not powercap_root.exists():
         print(f"Powercap root {powercap_root} does not exist. No RAPL zones will be monitored.")
         return zones
-    
+
     for child in powercap_root.iterdir():
         if not child.is_dir():
             continue
-        if not re.fullmatch(r"intel-rapl:\d+", child.name):
+
+        if not re.fullmatch(r"intel-rapl:\d+(?::\d+)?", child.name):
             continue
-    
+
         name_file = child / "name"
         energy_file = child / "energy_uj"
         max_energy_file = child / "max_energy_range_uj"
 
         if not (name_file.exists() and energy_file.exists() and max_energy_file.exists()):
             print(f"Skipping {child} because it does not contain the required files.")
+            continue
 
-        zone_name = name_file.read_text().strip()
+        domain = name_file.read_text().strip()
+
         zones.append(RaplZone(
-            name=zone_name,
+            key=child.name,
+            domain=domain,
             path=child,
             energy_uj_path=energy_file,
-            max_energy_range_uj_path=max_energy_file
+            max_energy_range_uj_path=max_energy_file,
         ))
 
+    zones.sort(key=lambda z: z.key)
     return zones
 
 def read_zone_energy_uj(zone: RaplZone) -> int:
@@ -111,17 +120,44 @@ def compute_energy_delta(start_uj: int, end_uj: int, max_range_uj: int) -> int:
 def snapshot_rapl(zones: List[RaplZone]) -> Dict[str, int]:
     snapshot = {}
     for zone in zones:
-        snapshot[zone.name] = read_zone_energy_uj(zone)
+        snapshot[zone.key] = read_zone_energy_uj(zone)
     return snapshot
 
-def compute_total_package_energy(start_snapshot: Dict[str, int], end_snapshot: Dict[str, int], zones: List[RaplZone]) -> int:
-    total_energy_uj = 0
+def compute_energy_by_domain(
+    start_snapshot: Dict[str, int],
+    end_snapshot: Dict[str, int],
+    zones: List[RaplZone],
+) -> Dict[str, float]:
+    totals_uj = {
+        "package": 0,
+        "core": 0,
+        "dram": 0,
+        "other": 0,
+    }
+
     for zone in zones:
-        start_uj = start_snapshot[zone.name]
-        end_uj = end_snapshot[zone.name]
+        start_uj = start_snapshot[zone.key]
+        end_uj = end_snapshot[zone.key]
         max_range_uj = read_zone_max_energy_range_uj(zone)
-        total_energy_uj += compute_energy_delta(start_uj, end_uj, max_range_uj)
-    return total_energy_uj / 1_000_000  # convert to joules
+        delta_uj = compute_energy_delta(start_uj, end_uj, max_range_uj)
+
+        domain = zone.domain.lower()
+
+        if domain.startswith("package"):
+            totals_uj["package"] += delta_uj
+        elif domain == "core":
+            totals_uj["core"] += delta_uj
+        elif domain == "dram":
+            totals_uj["dram"] += delta_uj
+        else:
+            totals_uj["other"] += delta_uj
+
+    return {
+        "package": totals_uj["package"] / 1_000_000,
+        "core": totals_uj["core"] / 1_000_000,
+        "dram": totals_uj["dram"] / 1_000_000,
+        "other": totals_uj["other"] / 1_000_000,
+    }
 
 
 # ======
@@ -248,9 +284,14 @@ def run_benchmark(
     elapsed_time_s = time.perf_counter() - t0
     end_snapshot = snapshot_rapl(rapl_zones) if rapl_zones else {}
 
-    energy_j = (
-        compute_total_package_energy(start_snapshot, end_snapshot, rapl_zones)
-        if rapl_zones else None
+    energy_by_domain = (
+        compute_energy_by_domain(start_snapshot, end_snapshot, rapl_zones)
+        if rapl_zones else {
+            "package": None,
+            "core": None,
+            "dram": None,
+            "other": None,
+        }
     )
 
     cleanup_benchmark_outputs(benchmark, dataset_dir)
@@ -264,7 +305,10 @@ def run_benchmark(
         "iterations": iterations,
         "chunk_items": chunk_items if benchmark == "pipeline_e2e_stream" else "",
         "elapsed_s": elapsed_time_s,
-        "energy_pkg_j": energy_j,
+        "energy_pkg_j": energy_by_domain["package"],
+        "energy_core_j": energy_by_domain["core"],
+        "energy_dram_j": energy_by_domain["dram"],
+        "energy_other_j": energy_by_domain["other"],
         "rss_start_bytes": mem_stats.rss_start,
         "rss_peak_bytes": mem_stats.rss_peak,
         "rss_end_bytes": mem_stats.rss_end,
@@ -426,9 +470,9 @@ def main() -> None:
         print("No benchmarks specified. Exiting.")
         return
 
-    rapl_zones = discover_package_rapl_zones()
+    rapl_zones = discover_rapl_zones()
     if rapl_zones:
-        zone_names = ", ".join(zone.name for zone in rapl_zones)
+        zone_names = ", ".join(f"{zone.key}:{zone.domain}" for zone in rapl_zones)
         print(f"Discovered RAPL zones: {zone_names}. Energy measurements will be collected for these zones.")
     else:
         print("No RAPL zones discovered. Energy measurements will be skipped.")
@@ -439,6 +483,14 @@ def main() -> None:
         "platform": platform.platform(),
         "processor": platform.processor(),
         "rapl_available": bool(rapl_zones),
+        "rapl_zones": [
+            {
+                "key": zone.key,
+                "domain": zone.domain,
+                "path": str(zone.path),
+            }
+            for zone in rapl_zones
+        ],
     }
 
     for benchmark in benchmarks:
@@ -506,11 +558,23 @@ def main() -> None:
                     append_csv_row(csv_path, row)
 
                     status = "success" if row["returncode"] == 0 else f"failed (return code {row['returncode']})"
-                    energy_str = (
-                        f"energy={row['energy_pkg_j']:.6f}J "
-                        if row["energy_pkg_j"] not in (None, "")
-                        else ""
-                    )
+                    energy_parts = []
+
+                    if row["energy_pkg_j"] not in (None, ""):
+                        energy_parts.append(f"pkg={row['energy_pkg_j']:.6f}J")
+
+                    if row["energy_core_j"] not in (None, "") and row["energy_core_j"] != 0:
+                        energy_parts.append(f"core={row['energy_core_j']:.6f}J")
+
+                    if row["energy_dram_j"] not in (None, "") and row["energy_dram_j"] != 0:
+                        energy_parts.append(f"dram={row['energy_dram_j']:.6f}J")
+
+                    if row["energy_other_j"] not in (None, "") and row["energy_other_j"] != 0:
+                        energy_parts.append(f"other={row['energy_other_j']:.6f}J")
+
+                    energy_str = " ".join(energy_parts)
+                    if energy_str:
+                        energy_str += " "
 
                     print(
                         f" -> {status} "
