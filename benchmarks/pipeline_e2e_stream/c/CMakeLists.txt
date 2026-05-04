@@ -10,7 +10,7 @@ add_executable(pipeline_e2e_stream_c
     ../../workloads/c/json_parse_workload.c
     ../../workloads/c/sha256_workload.c
     ../../workloads/c/file_copy_workload.c
-    ../../workloads/c/third_party/cJSON.c
+    ../../workloads/c/third_party/cjson/cJSON.c
 )
 
 target_include_directories(pipeline_e2e_stream_c PRIVATE
