@@ -6,35 +6,45 @@ cd "$PROJECT_ROOT"
 
 BENCHMARKS="sha256,json_parse,file_copy,pipeline_e2e,pipeline_e2e_stream"
 MIN_SIZE="1048576"
-MAX_SIZE="8589934592"
+MAX_SIZE="1073741824"
 REGEN="0"
 REBUILD="0"
-INSTALL_DEPS="0"
+SETUP_TOOLS="0"
 RUN_BENCHMARKS="1"
-JULIA_VERSION="1.12.5"
 PYTHON_VENV=".venv"
+
+GO_VERSION="1.25.0"
+GO_ROOT="$HOME/.local/go"
+GO_TARBALL="go${GO_VERSION}.linux-amd64.tar.gz"
+GO_URL="https://go.dev/dl/${GO_TARBALL}"
+
+JULIA_MODULE="julia/1.11.4"
+CMAKE_MODULE="cmake/3.24.2"
 
 usage() {
   cat <<EOF
 Usage: $0 [setup options] [-- benchmark options]
 
 Setup options:
-  --install-deps          Install Debian packages and Julia
+  --setup-tools           Install missing user-local tools, currently Go only
   --regen                 Regenerate datasets
   --rebuild               Rebuild C/Go binaries
   --benchmarks LIST       Benchmarks to generate/build/run
-  --min-dataset-size BYTES        Minimum dataset size
-  --max-dataset-size BYTES        Maximum dataset size
+  --min-dataset-size BYTES
+  --max-dataset-size BYTES
   --no-run                Only setup/build/generate, do not run benchmarks
-  --julia-version VER     Julia version to install if missing
+  --go-version VERSION    Go version to install locally if Go is missing
+  --julia-module MODULE   Julia module to load
+  --cmake-module MODULE   CMake module to load
   -h, --help              Show this help
 
 Everything after -- is passed to scripts/run_benchmarks.py.
 
 Examples:
-  $0 --install-deps --regen --rebuild -- --verify --iterations 25 --repetitions 5
-  $0 --rebuild --benchmarks sha256,json_parse -- --languages c,go --iterations 50
-  $0 --no-run --install-deps --rebuild
+  $0 --setup-tools --regen --rebuild --no-run
+  $0 --rebuild -- --verify --iterations 25 --repetitions 5 --max-dataset-size 1073741824
+  $0 -- --benchmark sha256 --languages c,go --iterations 10 --repetitions 3
+  prun -v -1 -np 1 $0 -- --benchmark sha256 --languages c --iterations 1 --repetitions 1
 EOF
 }
 
@@ -42,8 +52,14 @@ RUN_ARGS=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --setup-tools)
+      SETUP_TOOLS="1"
+      shift
+      ;;
     --install-deps)
-      INSTALL_DEPS="1"
+      echo "[native] Note: --install-deps is not supported on DAS-5 without sudo."
+      echo "[native] Treating it as --setup-tools for user-local tool setup."
+      SETUP_TOOLS="1"
       shift
       ;;
     --regen)
@@ -70,8 +86,18 @@ while [[ $# -gt 0 ]]; do
       RUN_BENCHMARKS="0"
       shift
       ;;
-    --julia-version)
-      JULIA_VERSION="$2"
+    --go-version)
+      GO_VERSION="$2"
+      GO_TARBALL="go${GO_VERSION}.linux-amd64.tar.gz"
+      GO_URL="https://go.dev/dl/${GO_TARBALL}"
+      shift 2
+      ;;
+    --julia-module)
+      JULIA_MODULE="$2"
+      shift 2
+      ;;
+    --cmake-module)
+      CMAKE_MODULE="$2"
       shift 2
       ;;
     --)
@@ -96,52 +122,98 @@ mkdir -p results
 
 echo "[native] Project root: $PROJECT_ROOT"
 echo "[native] Benchmarks: $BENCHMARKS"
+echo "[native] Dataset size range: $MIN_SIZE .. $MAX_SIZE"
 
 # -----------------------------
-# 1) Install host dependencies
+# 1) Load DAS-5 modules
 # -----------------------------
-if [[ "$INSTALL_DEPS" == "1" ]]; then
-  echo "[native] Installing Debian dependencies..."
+if command -v module >/dev/null 2>&1; then
+  echo "[native] Environment modules available."
 
-  sudo apt update
-  sudo apt install -y \
-    build-essential \
-    cmake \
-    pkg-config \
-    libssl-dev \
-    libcjson-dev \
-    ca-certificates \
-    git \
-    curl \
-    wget \
-    xz-utils \
-    python3 \
-    python3-venv \
-    python3-pip \
-    golang-go \
-    htop \
-    linux-cpupower
-
-  if ! command -v julia >/dev/null 2>&1; then
-    echo "[native] Installing Julia $JULIA_VERSION to /opt/julia..."
-
-    tmpdir="$(mktemp -d)"
-    wget -q "https://julialang-s3.julialang.org/bin/linux/x64/1.12/julia-${JULIA_VERSION}-linux-x86_64.tar.gz" \
-      -O "$tmpdir/julia.tar.gz"
-
-    sudo rm -rf /opt/julia
-    sudo mkdir -p /opt/julia
-    sudo tar -xzf "$tmpdir/julia.tar.gz" -C /opt/julia --strip-components=1
-    sudo ln -sf /opt/julia/bin/julia /usr/local/bin/julia
-
-    rm -rf "$tmpdir"
-  else
-    echo "[native] Julia already available: $(julia --version)"
+  if [[ -n "$CMAKE_MODULE" ]]; then
+    echo "[native] Loading CMake module: $CMAKE_MODULE"
+    module load "$CMAKE_MODULE" || echo "[native] Warning: failed to load $CMAKE_MODULE"
   fi
+
+  if [[ -n "$JULIA_MODULE" ]]; then
+    echo "[native] Loading Julia module: $JULIA_MODULE"
+    module load "$JULIA_MODULE" || echo "[native] Warning: failed to load $JULIA_MODULE"
+  fi
+else
+  echo "[native] Environment modules command not found. Continuing with existing PATH."
 fi
 
 # -----------------------------
-# 2) Python virtual environment
+# 2) Optional user-local tool setup
+# -----------------------------
+mkdir -p "$HOME/.local/bin"
+
+if [[ "$SETUP_TOOLS" == "1" ]]; then
+  if ! command -v go >/dev/null 2>&1; then
+    echo "[native] Go not found. Installing Go $GO_VERSION locally to $GO_ROOT"
+
+    tmpdir="$(mktemp -d)"
+    wget -q "$GO_URL" -O "$tmpdir/$GO_TARBALL"
+
+    rm -rf "$GO_ROOT"
+    mkdir -p "$HOME/.local"
+    tar -xzf "$tmpdir/$GO_TARBALL" -C "$HOME/.local"
+
+    rm -rf "$tmpdir"
+
+    echo "[native] Go installed locally."
+  else
+    echo "[native] Go already available: $(go version)"
+  fi
+fi
+
+if [[ -d "$GO_ROOT/bin" ]]; then
+  export PATH="$GO_ROOT/bin:$PATH"
+fi
+
+# -----------------------------
+# 3) Print tool versions
+# -----------------------------
+echo "[native] Toolchain check:"
+
+if command -v gcc >/dev/null 2>&1; then
+  echo "  gcc:    $(gcc --version | head -n 1)"
+else
+  echo "  gcc:    not found"
+fi
+
+if command -v cmake >/dev/null 2>&1; then
+  echo "  cmake:  $(cmake --version | head -n 1)"
+else
+  echo "  cmake:  not found"
+fi
+
+if command -v python3 >/dev/null 2>&1; then
+  echo "  python: $(python3 --version)"
+else
+  echo "  python: not found"
+fi
+
+if command -v go >/dev/null 2>&1; then
+  echo "  go:     $(go version)"
+else
+  echo "  go:     not found"
+fi
+
+if command -v julia >/dev/null 2>&1; then
+  echo "  julia:  $(julia --version)"
+else
+  echo "  julia:  not found"
+fi
+
+if command -v pkg-config >/dev/null 2>&1; then
+  echo "  pkg-config: found"
+else
+  echo "  pkg-config: not found"
+fi
+
+# -----------------------------
+# 4) Python virtual environment
 # -----------------------------
 echo "[native] Preparing Python virtual environment..."
 
@@ -167,7 +239,7 @@ find benchmarks -type f -name requirements.txt 2>/dev/null | while read -r req; 
 done
 
 # -----------------------------
-# 3) Generate datasets
+# 5) Generate datasets
 # -----------------------------
 need_gen=0
 
@@ -183,15 +255,15 @@ if [[ "$REGEN" == "1" || "$need_gen" == "1" ]]; then
   echo "[native] Generating datasets..."
   python scripts/generate_inputs.py \
     --benchmarks "$BENCHMARKS" \
-    --min-dataset-size "$MIN_SIZE" \
-    --max-dataset-size "$MAX_SIZE" \
+    --min-size "$MIN_SIZE" \
+    --max-size "$MAX_SIZE" \
     --out-root datasets
 else
   echo "[native] Datasets already present; skipping generation."
 fi
 
 # -----------------------------
-# 4) Instantiate Julia projects
+# 6) Instantiate Julia projects
 # -----------------------------
 if command -v julia >/dev/null 2>&1; then
   echo "[native] Instantiating Julia environments..."
@@ -206,26 +278,39 @@ else
 fi
 
 # -----------------------------
-# 5) Build C workloads
+# 7) Build C workloads
 # -----------------------------
 echo "[native] Building C workloads..."
 
-find benchmarks -type f -name CMakeLists.txt 2>/dev/null | while read -r cmakefile; do
-  dir="$(dirname "$cmakefile")"
-  build_dir="$dir/build"
-
-  if [[ "$REBUILD" == "1" || ! -d "$build_dir" ]]; then
-    echo "  building C workload in $dir"
-    mkdir -p "$build_dir"
-    cmake -S "$dir" -B "$build_dir" -DCMAKE_BUILD_TYPE=Release
-    cmake --build "$build_dir" -j"$(nproc)"
-  else
-    echo "  (skip) $dir already built"
+if ! command -v cmake >/dev/null 2>&1; then
+  echo "[native] CMake not found; skipping C builds."
+else
+  if command -v pkg-config >/dev/null 2>&1; then
+    if pkg-config --exists libcjson; then
+      echo "[native] libcjson detected through pkg-config."
+    else
+      echo "[native] Warning: libcjson not detected through pkg-config."
+      echo "[native] C targets depending on cJSON may fail to configure/build."
+    fi
   fi
-done
+
+  find benchmarks -type f -name CMakeLists.txt 2>/dev/null | while read -r cmakefile; do
+    dir="$(dirname "$cmakefile")"
+    build_dir="$dir/build"
+
+    if [[ "$REBUILD" == "1" || ! -d "$build_dir" ]]; then
+      echo "  building C workload in $dir"
+      mkdir -p "$build_dir"
+      cmake -S "$dir" -B "$build_dir" -DCMAKE_BUILD_TYPE=Release
+      cmake --build "$build_dir" -j"$(nproc)"
+    else
+      echo "  (skip) $dir already built"
+    fi
+  done
+fi
 
 # -----------------------------
-# 6) Prepare Go module
+# 8) Prepare Go module
 # -----------------------------
 if command -v go >/dev/null 2>&1; then
   echo "[native] Preparing Go module..."
@@ -237,34 +322,38 @@ if command -v go >/dev/null 2>&1; then
 
   go mod tidy
 else
-  echo "[native] Go not found; skipping Go module setup."
+  echo "[native] Go not found; skipping Go module setup and Go builds."
 fi
 
 # -----------------------------
-# 7) Build Go workloads
+# 9) Build Go workloads
 # -----------------------------
-echo "[native] Building Go workloads..."
+if command -v go >/dev/null 2>&1; then
+  echo "[native] Building Go workloads..."
 
-find benchmarks -type f -name '*_main.go' 2>/dev/null | while read -r mainfile; do
-  dir="$(dirname "$mainfile")"
-  base="$(basename "$mainfile" _main.go)"
-  out="$dir/${base}_go"
+  find benchmarks -type f -name '*_main.go' 2>/dev/null | while read -r mainfile; do
+    dir="$(dirname "$mainfile")"
+    base="$(basename "$mainfile" _main.go)"
+    out="$dir/${base}_go"
 
-  if [[ "$REBUILD" == "1" || ! -f "$out" ]]; then
-    echo "  building Go workload in $dir -> $out"
-    (cd "$dir" && go build -o "$(basename "$out")" .)
-  else
-    echo "  (skip) $dir already built"
-  fi
-done
+    if [[ "$REBUILD" == "1" || ! -f "$out" ]]; then
+      echo "  building Go workload in $dir -> $out"
+      (cd "$dir" && go build -o "$(basename "$out")" .)
+    else
+      echo "  (skip) $dir already built"
+    fi
+  done
+else
+  echo "[native] Go not available; skipping Go builds."
+fi
 
 # -----------------------------
-# 8) RAPL visibility check
+# 10) RAPL visibility check
 # -----------------------------
 echo "[native] Checking RAPL zones..."
 
 if [[ -d /sys/class/powercap ]]; then
-  find /sys/class/powercap -maxdepth 2 -name energy_uj -print | while read -r energy_file; do
+  find /sys/class/powercap -maxdepth 2 -name energy_uj -print | sort | while read -r energy_file; do
     zone_dir="$(dirname "$energy_file")"
     if [[ -f "$zone_dir/name" ]]; then
       echo "  $zone_dir: $(cat "$zone_dir/name")"
@@ -279,7 +368,7 @@ fi
 echo "[native] Setup complete."
 
 # -----------------------------
-# 9) Run benchmarks
+# 11) Run benchmarks
 # -----------------------------
 if [[ "$RUN_BENCHMARKS" == "1" ]]; then
   echo "[native] Running benchmarks..."
