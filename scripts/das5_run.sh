@@ -22,8 +22,11 @@ SETUP_TOOLS="0"
 RUN_BENCHMARKS="1"
 PYTHON_VENV=".venv"
 
+DATASETS_OUT_ROOT="/var/scratch/$USER/realistic-energy/datasets"
+RESULTS_OUT_ROOT="/var/scratch/$USER/realistic-energy/results"
+
+GO_ROOT="/var/scratch/$USER/realistic-energy/tools/go"
 GO_VERSION="1.25.0"
-GO_ROOT="$HOME/.local/go"
 GO_TARBALL="go${GO_VERSION}.linux-amd64.tar.gz"
 GO_URL="https://go.dev/dl/${GO_TARBALL}"
 
@@ -46,6 +49,8 @@ Setup options:
   --julia-module MODULE   Julia module to load
   --cmake-module MODULE   CMake module to load
   -h, --help              Show this help
+  --datasets-out-root DIR  Directory where generated datasets are stored
+  --results-out-root DIR   Directory where benchmark results are stored
 
 Everything after -- is passed to scripts/run_benchmarks.py.
 
@@ -114,6 +119,14 @@ while [[ $# -gt 0 ]]; do
       RUN_ARGS=("$@")
       break
       ;;
+    --datasets-out-root)
+      DATASETS_OUT_ROOT="$2"
+      shift 2
+      ;;
+    --results-out-root)
+      RESULTS_OUT_ROOT="$2"
+      shift 2
+      ;;
     -h|--help)
       usage
       exit 0
@@ -128,6 +141,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 mkdir -p results
+mkdir -p "$DATASETS_OUT_ROOT"
+mkdir -p "$RESULTS_OUT_ROOT"
+mkdir -p "$(dirname "$GO_ROOT")"
 
 echo "[native] Project root: $PROJECT_ROOT"
 echo "[native] Benchmarks: $BENCHMARKS"
@@ -393,7 +409,7 @@ if [[ "$REGEN" == "1" || "$need_gen" == "1" ]]; then
     --benchmarks "$BENCHMARKS" \
     --min-size "$MIN_SIZE" \
     --max-size "$MAX_SIZE" \
-    --out-root datasets
+    --out-root "$DATASETS_OUT_ROOT"
 else
   echo "[native] Datasets already present; skipping generation."
 fi
@@ -508,5 +524,8 @@ echo "[native] Setup complete."
 # -----------------------------
 if [[ "$RUN_BENCHMARKS" == "1" ]]; then
   echo "[native] Running benchmarks..."
-  exec python -u scripts/run_benchmarks.py "${RUN_ARGS[@]}"
+  exec python -u scripts/run_benchmarks.py \
+    --datasets-root "$DATASETS_OUT_ROOT" \
+    --results-dir "$RESULTS_OUT_ROOT/benchmark_results.csv" \
+    "${RUN_ARGS[@]}"
 fi
