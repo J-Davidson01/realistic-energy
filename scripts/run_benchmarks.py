@@ -442,6 +442,21 @@ def filter_datasets_by_size(dataset_dirs: List[Path], min_size: int | None, max_
         filtered.append(d)
     return filtered
 
+def get_git_commit() -> str | None:
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if completed.returncode == 0:
+            return completed.stdout.strip()
+    except OSError:
+        pass
+    return None
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run benchmarks and collect energy and memory usage data")
     parser.add_argument("--benchmark", type=str, default="sha256,json_parse,file_copy,pipeline_e2e,pipeline_e2e_stream", help="Comma-separated benchmark names, e.g. sha256,json_parse,file_copy,pipeline")
@@ -482,6 +497,7 @@ def main() -> None:
         "hostname": socket.gethostname(),
         "platform": platform.platform(),
         "processor": platform.processor(),
+        "python_version": sys.version,
         "rapl_available": bool(rapl_zones),
         "rapl_zones": [
             {
@@ -492,6 +508,8 @@ def main() -> None:
             for zone in rapl_zones
         ],
     }
+
+    run_metadata["git_commit"] = get_git_commit()
 
     for benchmark in benchmarks:
         available_languages = detect_languages(benchmark)

@@ -212,6 +212,133 @@ else
   echo "  pkg-config: not found"
 fi
 
+
+# -----------------------------
+# 3b) Save environment / toolchain metadata
+# -----------------------------
+ENV_TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+ENV_TXT="results/native_environment_${ENV_TIMESTAMP}.txt"
+
+echo "[native] Saving environment metadata to $ENV_TXT"
+
+{
+  echo "timestamp: $(date --iso-8601=seconds 2>/dev/null || date)"
+  echo "hostname: $(hostname)"
+  echo "user: $(whoami)"
+  echo "working_directory: $(pwd)"
+  echo
+
+  echo "=== Kernel / OS ==="
+  uname -a || true
+  if [[ -f /etc/os-release ]]; then
+    cat /etc/os-release
+  fi
+  echo
+
+  echo "=== CPU ==="
+  lscpu || true
+  echo
+
+  echo "=== Memory ==="
+  free -h || true
+  echo
+  swapon --show || true
+  echo
+
+  echo "=== Loaded modules ==="
+  if command -v module >/dev/null 2>&1; then
+    module list 2>&1 || true
+  else
+    echo "module command not available"
+  fi
+  echo
+
+  echo "=== Module availability snapshot ==="
+  if command -v module >/dev/null 2>&1; then
+    module --terse list 2>&1 || true
+  else
+    echo "module command not available"
+  fi
+  echo
+
+  echo "=== Toolchain versions ==="
+  command -v gcc >/dev/null 2>&1 && gcc --version | head -n 1 || echo "gcc: not found"
+  command -v g++ >/dev/null 2>&1 && g++ --version | head -n 1 || echo "g++: not found"
+  command -v cmake >/dev/null 2>&1 && cmake --version | head -n 1 || echo "cmake: not found"
+  command -v pkg-config >/dev/null 2>&1 && pkg-config --version | sed 's/^/pkg-config: /' || echo "pkg-config: not found"
+  command -v python >/dev/null 2>&1 && python --version || echo "python: not found"
+  command -v python3 >/dev/null 2>&1 && python3 --version || echo "python3: not found"
+  command -v pip >/dev/null 2>&1 && pip --version || echo "pip: not found"
+  command -v go >/dev/null 2>&1 && go version || echo "go: not found"
+  command -v julia >/dev/null 2>&1 && julia --version || echo "julia: not found"
+  command -v git >/dev/null 2>&1 && git --version || echo "git: not found"
+  echo
+
+  echo "=== Python packages ==="
+  if command -v python >/dev/null 2>&1; then
+    python -m pip freeze || true
+  fi
+  echo
+
+  echo "=== Julia environment status ==="
+  if command -v julia >/dev/null 2>&1; then
+    find benchmarks -type f -name Project.toml 2>/dev/null | while read -r proj; do
+      dir="$(dirname "$proj")"
+      echo "--- Julia project: $dir ---"
+      julia --project="$dir" -e 'using Pkg; Pkg.status()' || true
+      echo
+    done
+  else
+    echo "julia: not found"
+  fi
+  echo
+
+  echo "=== Go module info ==="
+  if command -v go >/dev/null 2>&1; then
+    go env GOVERSION GOOS GOARCH GOMOD GOPATH GOROOT || true
+    if [[ -f go.mod ]]; then
+      echo
+      echo "--- go.mod ---"
+      cat go.mod
+    fi
+    if [[ -f go.sum ]]; then
+      echo
+      echo "--- go.sum sha256 ---"
+      sha256sum go.sum || true
+    fi
+  else
+    echo "go: not found"
+  fi
+  echo
+
+  echo "=== C library versions ==="
+  if command -v pkg-config >/dev/null 2>&1; then
+    pkg-config --modversion libcjson 2>/dev/null | sed 's/^/libcjson: /' || echo "libcjson: not found via pkg-config"
+    pkg-config --modversion openssl 2>/dev/null | sed 's/^/openssl-pkgconfig: /' || echo "openssl: not found via pkg-config"
+  fi
+  command -v openssl >/dev/null 2>&1 && openssl version || echo "openssl binary: not found"
+  echo
+
+  echo "=== RAPL zones ==="
+  if [[ -d /sys/class/powercap ]]; then
+    for z in /sys/class/powercap/intel-rapl*; do
+      if [[ -f "$z/name" ]]; then
+        echo "$z"
+        echo "  name: $(cat "$z/name")"
+        [[ -f "$z/energy_uj" ]] && echo "  energy_uj: $(cat "$z/energy_uj")"
+        [[ -f "$z/max_energy_range_uj" ]] && echo "  max_energy_range_uj: $(cat "$z/max_energy_range_uj")"
+      fi
+    done
+  else
+    echo "/sys/class/powercap not found"
+  fi
+  echo
+
+  echo "=== Git revision ==="
+  git rev-parse HEAD 2>/dev/null | sed 's/^/commit: /' || true
+  git status --short 2>/dev/null || true
+} > "$ENV_TXT"
+
 # -----------------------------
 # 4) Python virtual environment
 # -----------------------------
