@@ -10,7 +10,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <libgen.h>
-#include <cjson/cJSON.h>
+#include "cJSON.h"
 #include <time.h>
 
 #ifndef DEFAULT_JSON_DATASET_DIR

@@ -10,22 +10,19 @@ add_executable(pipeline_e2e_c
     ../../workloads/c/json_parse_workload.c
     ../../workloads/c/sha256_workload.c
     ../../workloads/c/file_copy_workload.c
+    ../../workloads/c/third_party/cjson/cJSON.c
 )
 
 target_include_directories(pipeline_e2e_c PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ../../workloads/c
+    ../../workloads/c/third_party/cjson
 )
-
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(CJSON REQUIRED libcjson)
 
 find_package(OpenSSL REQUIRED)
 
-target_include_directories(pipeline_e2e_c PRIVATE ${CJSON_INCLUDE_DIRS})
-target_link_directories(pipeline_e2e_c PRIVATE ${CJSON_LIBRARY_DIRS})
-
 target_link_libraries(pipeline_e2e_c PRIVATE
-    ${CJSON_LIBRARIES}
     OpenSSL::Crypto
 )
+
+target_compile_options(pipeline_e2e_c PRIVATE -O3 -march=native)

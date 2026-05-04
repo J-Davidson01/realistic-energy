@@ -5,7 +5,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <ctype.h>
-#include <cjson/cJSON.h>
+#include "cJSON.h"
 
 static unsigned char* read_file(const char* path, size_t *out_len) {
         FILE *file = fopen(path, "rb");
