@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if PROJECT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null)"; then
+  :
+elif PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+  :
+else
+  PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+fi
+
 cd "$PROJECT_ROOT"
 
 BENCHMARKS="sha256,json_parse,file_copy,pipeline_e2e,pipeline_e2e_stream"
