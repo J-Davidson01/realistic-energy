@@ -255,7 +255,7 @@ def run_benchmark(
         command,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True,
+        universal_newlines=True,
     )
 
     proc_ps = psutil.Process(proc.pid)
