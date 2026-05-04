@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import sys
+from typing import List, Tuple
 from pathlib import Path
 
 import json
@@ -20,7 +21,7 @@ DEFAULT_CHUNK_ITEMS = 1024
 PIPELINE_BUFFER_GROWTH_FACTOR = 2
 
 
-def derive_dataset_dirs_from_selector(dataset_selector: str) -> tuple[str, str, str]:
+def derive_dataset_dirs_from_selector(dataset_selector: str) -> Tuple[str, str, str]:
     selector = Path(dataset_selector)
     size_name = selector.name
     datasets_root = selector.parent.parent
@@ -32,14 +33,14 @@ def derive_dataset_dirs_from_selector(dataset_selector: str) -> tuple[str, str, 
     return str(json_dataset_dir), str(sha256_dataset_dir), str(output_dir)
 
 
-def build_json_chunks(input_json: str, chunk_items: int) -> tuple[list[str], int]:
+def build_json_chunks(input_json: str, chunk_items: int) -> Tuple[List[str], int]:
     root = json.loads(input_json)
     items = root["items"]
 
     if chunk_items <= 0:
         chunk_items = 1
 
-    chunks: list[str] = []
+    chunks: List[str] = []
     max_chunk_input_len = 0
 
     for start in range(0, len(items), chunk_items):
@@ -55,7 +56,7 @@ def build_json_chunks(input_json: str, chunk_items: int) -> tuple[list[str], int
     return chunks, max_chunk_input_len
 
 
-def file_equals_streamed_chunks(path: Path, chunks: list[str]) -> bool:
+def file_equals_streamed_chunks(path: Path, chunks: List[str]) -> bool:
     file_bytes = path.read_bytes()
     offset = 0
 

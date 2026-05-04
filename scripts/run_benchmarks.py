@@ -431,7 +431,7 @@ def cleanup_benchmark_outputs(benchmark: str, dataset_dir: Path) -> None:
         except FileNotFoundError:
             pass
 
-def filter_datasets_by_size(dataset_dirs: List[Path], min_size: int | None, max_size: int | None) -> List[Path]:
+def filter_datasets_by_size(dataset_dirs: List[Path], min_size: Optional[int], max_size: Optional[int]) -> List[Path]:
     filtered = []
     for d in dataset_dirs:
         size = int(d.name)

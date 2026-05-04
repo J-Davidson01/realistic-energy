@@ -4,7 +4,7 @@ import json
 sink = 0
 
 
-def workload_json_parse(input_json: str, output_json: list[str], output_len: list[int]) -> int:
+def workload_json_parse(input_json: str, output_json, output_len) -> int:
     global sink
 
     root = json.loads(input_json)

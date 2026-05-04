@@ -6,6 +6,7 @@ from .file_copy_workload import (
 )
 from .sha256_workload import workload_sha256
 from .json_parse_workload import workload_json_parse
+from typing import List
 
 import os
 
@@ -13,7 +14,7 @@ pipeline_e2e_stream_sink = 0
 
 
 def workload_pipeline_e2e_stream(
-    chunks: list[str],
+    chunks: List[str],
     key_hmac: bytes,
     key_xor: bytes,
     ciphertext: bytearray,
