@@ -5,7 +5,7 @@ VUNETID="jdn439"
 DAS5ID="jdn439"
 
 REMOTE_HOST="fs0.das5.cs.vu.nl"
-REMOTE_DIR="~/realistic-energy/results/"
+REMOTE_DIR="/var/scratch/jdn439/realistic-energy/results/"
 LOCAL_DIR="../results/das5/"
 
 mkdir -p "$LOCAL_DIR"

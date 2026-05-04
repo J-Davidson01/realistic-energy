@@ -60,6 +60,35 @@ Run only a few languages:
 Run streaming benchmark with custom chunk-size:
 ./scripts/native_run.sh -- --benchmark pipeline_e2e_stream --chunk-items 4096 --iterations 25 --repetitions 5 --verify
 
+
+---------
+Das5
+
+--------
+Generation no run
+--------
+prun -v -1 -np 1 ./scripts/das5_run.sh \
+  --setup-tools \
+  --regen \
+  --rebuild \
+  --min-dataset-size 1048576 \
+  --max-dataset-size 1073741824 \
+  --no-run
+
+-------
+Run
+------
+prun -v -1 -np 1 ./scripts/das5_run.sh \
+  --setup-tools \
+  --min-dataset-size 1048576 \
+  --max-dataset-size 1073741824 \
+  -- \
+  --min-dataset-size 1048576 \
+  --max-dataset-size 1073741824 \
+  --iterations 1 \
+  --repetitions 1
+
+
 # Contribute
 TODO: Explain how other users and developers can contribute to make your code better. 
 

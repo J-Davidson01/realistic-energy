@@ -238,7 +238,7 @@ fi
 # 3b) Save environment / toolchain metadata
 # -----------------------------
 ENV_TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
-ENV_TXT="results/native_environment_${ENV_TIMESTAMP}.txt"
+ENV_TXT="${RESULTS_OUT_ROOT}/native_environment_${ENV_TIMESTAMP}.txt"
 
 echo "[native] Saving environment metadata to $ENV_TXT"
 
