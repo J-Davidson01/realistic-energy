@@ -29,6 +29,7 @@ RESULTS_DIR = PROJECT_ROOT / "results"
 CSV_FIELDS = [
     "benchmark",
     "language",
+    "variant",
     "size",
     "iterations",
     "chunk_items",
@@ -224,8 +225,8 @@ def format_command(template: List[str], dataset_dir: Path, iterations: int, veri
 def run_command_capture(command: List[str]) -> subprocess.CompletedProcess:
     return subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
 
-def run_verify(language: str, benchmark: str, dataset_dir: Path, chunk_items: int) -> bool:
-    command = get_language_command(language, benchmark, dataset_dir, 1, chunk_items, verify=True)
+def run_verify(language: str, benchmark: str, dataset_dir: Path, chunk_items: int, variant: str = "default") -> bool:
+    command = get_language_command(language, benchmark, dataset_dir, 1, chunk_items, variant, verify=True)
     completed = run_command_capture(command)
 
     cleanup_benchmark_outputs(benchmark, dataset_dir)
@@ -243,10 +244,11 @@ def run_benchmark(
     dataset_dir: Path,
     iterations: int,
     chunk_items: int,
+    variant: str,
     memory_interval_s: float,
     rapl_zones: List[RaplZone]
 ) -> Dict[str, object]:
-    command = get_language_command(language, benchmark, dataset_dir, iterations, chunk_items, verify=False)
+    command = get_language_command(language, benchmark, dataset_dir, iterations, chunk_items, variant, verify=False)
 
     start_snapshot = snapshot_rapl(rapl_zones) if rapl_zones else {}
     t0 = time.perf_counter()
@@ -301,6 +303,7 @@ def run_benchmark(
     return {
         "benchmark": benchmark,
         "language": language,
+        "variant": variant,
         "size": size,
         "iterations": iterations,
         "chunk_items": chunk_items if benchmark == "pipeline_e2e_stream" else "",
@@ -371,6 +374,7 @@ def get_language_command(
     dataset_dir: Path,
     iterations: int,
     chunk_items: int,
+    variant: str = "default",
     verify: bool = False
 ) -> List[str]:
     benchmark_root = BENCHMARKS_ROOT / benchmark
@@ -408,6 +412,9 @@ def get_language_command(
 
     if benchmark == "pipeline_e2e_stream":
         command.extend(["--chunk-items", str(chunk_items)])
+
+    if language == "python" and benchmark == "json_parse" and variant != "default":
+        command.extend(["--json-impl", variant])
 
     if verify:
         command.append("--verify")
@@ -474,6 +481,7 @@ def main() -> None:
     parser.add_argument("--min-dataset-size", type=int, default=None, help="Minimum dataset size in bytes to include")
     parser.add_argument("--max-dataset-size", type=int, default=None, help="Maximum dataset size in bytes to include")
     parser.add_argument("--chunk-items", type=int, default=1024, help="Amount of items to process in each chunk for streaming benchmarks")
+    parser.add_argument("--python-json-impls", type=str, default="json", help="Comma-separated Python JSON implementations for json_parse, e.g. json,json_no_c_acc,orjson")
     args = parser.parse_args()
 
     benchmarks = [b.strip() for b in args.benchmark.split(",") if b.strip()]
@@ -482,6 +490,12 @@ def main() -> None:
     datasets_root = Path(args.datasets_root)
     csv_path = make_timestamped_results_path(Path(args.results_dir))
     memory_interval_s = args.memory_interval_ms / 1000.0
+
+    python_json_impls = [
+        impl.strip()
+        for impl in args.python_json_impls.split(",")
+        if impl.strip()
+    ]
 
     if not benchmarks:
         print("No benchmarks specified. Exiting.")
@@ -540,42 +554,64 @@ def main() -> None:
             continue
 
         for language in languages:
-            if args.verify:
-                verify_dataset = dataset_dirs[0]
-                print(f"Running verification for {language} on {benchmark} dataset {verify_dataset.name}...")
-                if not run_verify(language, benchmark, verify_dataset, args.chunk_items):
-                    print(f"Verification failed for {language}. Skipping benchmark runs for this language.")
-                    continue
-                print(f"Verification succeeded for {language}. Proceeding with benchmark runs.")
+            if language == "python" and benchmark == "json_parse":
+                variants = python_json_impls
+            else:
+                variants = ["default"]
 
-            for dataset_dir in dataset_dirs:
-                if args.warmup:
-                    warmup_command = get_language_command(language, benchmark, dataset_dir, 1, args.chunk_items, verify=False)
-                    subprocess.run(
-                        warmup_command,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        check=False,
-                    )
-                    cleanup_benchmark_outputs(benchmark, dataset_dir)
-
-                for repetition in range(args.repetitions):
+            for variant in variants:
+                if args.verify:
+                    verify_dataset = dataset_dirs[0]
                     print(
-                        f"[run] Running {benchmark} in {language} with dataset {dataset_dir.name} "
-                        f"for {args.iterations} iterations (rep {repetition + 1}/{args.repetitions})..."
+                        f"Running verification for {language} on {benchmark} "
+                        f"variant {variant} dataset {verify_dataset.name}..."
                     )
+                    if not run_verify(language, benchmark, verify_dataset, args.chunk_items, variant):
+                        print(
+                            f"Verification failed for {language} variant {variant}. "
+                            "Skipping benchmark runs for this variant."
+                        )
+                        continue
+                    print(f"Verification succeeded for {language} variant {variant}. Proceeding with benchmark runs.")
 
-                    row = run_benchmark(
-                        language=language,
-                        benchmark=benchmark,
-                        dataset_dir=dataset_dir,
-                        iterations=args.iterations,
-                        chunk_items=args.chunk_items,
-                        memory_interval_s=memory_interval_s,
-                        rapl_zones=rapl_zones,
-                    )
-                    row["repetition"] = repetition
-                    append_csv_row(csv_path, row)
+                for dataset_dir in dataset_dirs:
+                    if args.warmup:
+                        warmup_command = get_language_command(
+                            language,
+                            benchmark,
+                            dataset_dir,
+                            1,
+                            args.chunk_items,
+                            variant,
+                            verify=False,
+                        )
+                        subprocess.run(
+                            warmup_command,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL,
+                            check=False,
+                        )
+                        cleanup_benchmark_outputs(benchmark, dataset_dir)
+
+                    for repetition in range(args.repetitions):
+                        print(
+                            f"[run] Running {benchmark} in {language} variant {variant} "
+                            f"with dataset {dataset_dir.name} for {args.iterations} iterations "
+                            f"(rep {repetition + 1}/{args.repetitions})..."
+                        )
+
+                        row = run_benchmark(
+                            language=language,
+                            benchmark=benchmark,
+                            dataset_dir=dataset_dir,
+                            iterations=args.iterations,
+                            chunk_items=args.chunk_items,
+                            variant=variant,
+                            memory_interval_s=memory_interval_s,
+                            rapl_zones=rapl_zones,
+                        )
+                        row["repetition"] = repetition
+                        append_csv_row(csv_path, row)
 
                     status = "success" if row["returncode"] == 0 else f"failed (return code {row['returncode']})"
                     energy_parts = []
