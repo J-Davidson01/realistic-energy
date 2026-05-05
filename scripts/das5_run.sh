@@ -32,6 +32,11 @@ OPENSSL_ROOT="${TOOLS_ROOT}/openssl"
 OPENSSL_INCLUDE_DIR="${OPENSSL_ROOT}/include"
 OPENSSL_CRYPTO_LIBRARY="${OPENSSL_ROOT}/lib/libcrypto.a"
 
+PYTHON_VERSION="3.11.9"
+PYTHON_ROOT="${TOOLS_ROOT}/python-${PYTHON_VERSION}"
+PYTHON_BIN="${PYTHON_ROOT}/bin/python3"
+PYTHON_VENV=".venv-das5-py${PYTHON_VERSION}"
+
 GO_ROOT="${TOOLS_ROOT}/go"
 
 JULIA_MODULE="julia/1.11.4"
@@ -192,6 +197,15 @@ if [[ ! -f "$OPENSSL_INCLUDE_DIR/openssl/evp.h" || ! -f "$OPENSSL_CRYPTO_LIBRARY
   echo "  prun -v -1 -np 1 ./scripts/das5_setup_tools.sh"
 fi
 
+if [[ -x "$PYTHON_BIN" ]]; then
+  echo "[native] Using local Python: $PYTHON_BIN"
+else
+  echo "[native] Python not found at $PYTHON_BIN"
+  echo "[native] Run first:"
+  echo "  prun -v -1 -np 1 ./scripts/das5_setup_tools.sh"
+  exit 1
+fi
+
 # -----------------------------
 # 3) Print tool versions
 # -----------------------------
@@ -210,7 +224,7 @@ else
 fi
 
 if command -v python3 >/dev/null 2>&1; then
-  echo "  python: $(python3 --version)"
+  echo "  python: $("$PYTHON_BIN" --version)"
 else
   echo "  python: not found"
 fi
@@ -288,7 +302,7 @@ echo "[native] Saving environment metadata to $ENV_TXT"
   command -v cmake >/dev/null 2>&1 && cmake --version | head -n 1 || echo "cmake: not found"
   command -v pkg-config >/dev/null 2>&1 && pkg-config --version | sed 's/^/pkg-config: /' || echo "pkg-config: not found"
   command -v python >/dev/null 2>&1 && python --version || echo "python: not found"
-  command -v python3 >/dev/null 2>&1 && python3 --version || echo "python3: not found"
+  command -v python3 >/dev/null 2>&1 && "$PYTHON_BIN" --version || echo "python3: not found"
   command -v pip >/dev/null 2>&1 && pip --version || echo "pip: not found"
   command -v go >/dev/null 2>&1 && go version || echo "go: not found"
   command -v julia >/dev/null 2>&1 && julia --version || echo "julia: not found"
@@ -366,7 +380,7 @@ echo "[native] Saving environment metadata to $ENV_TXT"
 echo "[native] Preparing Python virtual environment..."
 
 if [[ ! -d "$PYTHON_VENV" ]]; then
-  python3 -m venv "$PYTHON_VENV"
+  "$PYTHON_BIN" -m venv "$PYTHON_VENV"
 fi
 
 # shellcheck disable=SC1091

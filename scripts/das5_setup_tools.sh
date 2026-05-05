@@ -4,6 +4,11 @@ set -euo pipefail
 TOOLS_ROOT="${HOME}/.local/realistic-energy/tools"
 SRC_ROOT="${TOOLS_ROOT}/src"
 
+PYTHON_VERSION="3.11.9"
+PYTHON_ROOT="${TOOLS_ROOT}/python-${PYTHON_VERSION}"
+PYTHON_TARBALL="cpython-${PYTHON_VERSION}+20240713-x86_64-unknown-linux-gnu-install_only.tar.gz"
+PYTHON_URL="https://github.com/indygreg/python-build-standalone/releases/download/20240713/${PYTHON_TARBALL}"
+
 GO_VERSION="1.25.0"
 GO_ROOT="${TOOLS_ROOT}/go"
 GO_TARBALL="go${GO_VERSION}.linux-amd64.tar.gz"
@@ -106,6 +111,36 @@ fi
 echo
 
 # -----------------------------
+# Python
+# -----------------------------
+echo "[setup] Installing Python ${PYTHON_VERSION}"
+
+if [[ -x "${PYTHON_ROOT}/bin/python3" ]]; then
+  echo "[setup] Python already installed: $("${PYTHON_ROOT}/bin/python3" --version)"
+else
+  cd "${SRC_ROOT}"
+
+  echo "[setup] Downloading ${PYTHON_URL}"
+  wget -O "${PYTHON_TARBALL}" "${PYTHON_URL}"
+
+  echo "[setup] Removing old Python root: ${PYTHON_ROOT}"
+  rm -rf "${PYTHON_ROOT}"
+
+  echo "[setup] Extracting Python into ${PYTHON_ROOT}"
+  mkdir -p "${PYTHON_ROOT}"
+  tar -xzf "${PYTHON_TARBALL}" -C "${PYTHON_ROOT}" --strip-components=1
+
+  if [[ ! -x "${PYTHON_ROOT}/bin/python3" ]]; then
+    echo "[setup] ERROR: Python install failed. Expected binary not found:"
+    echo "        ${PYTHON_ROOT}/bin/python3"
+    find "${PYTHON_ROOT}" -maxdepth 3 -print | sort | head -100
+    exit 1
+  fi
+
+  echo "[setup] Python installed: $("${PYTHON_ROOT}/bin/python3" --version)"
+fi
+
+# -----------------------------
 # Final summary
 # -----------------------------
 echo "[setup] Final tool summary"
@@ -116,6 +151,10 @@ echo "  Go binary:    ${GO_ROOT}/bin/go"
 echo "  OpenSSL root: ${OPENSSL_ROOT}"
 echo "  OpenSSL bin:  ${OPENSSL_ROOT}/bin/openssl"
 "${OPENSSL_ROOT}/bin/openssl" version
+
+echo "  Python root:  ${PYTHON_ROOT}"
+echo "  Python bin:   ${PYTHON_ROOT}/bin/python3"
+"${PYTHON_ROOT}/bin/python3" --version
 
 echo
 echo "[setup] Add this to PATH when needed:"
