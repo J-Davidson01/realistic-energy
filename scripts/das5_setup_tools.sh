@@ -14,6 +14,11 @@ GO_ROOT="${TOOLS_ROOT}/go"
 GO_TARBALL="go${GO_VERSION}.linux-amd64.tar.gz"
 GO_URL="https://go.dev/dl/${GO_TARBALL}"
 
+JULIA_VERSION="1.12.5"
+JULIA_ROOT="${TOOLS_ROOT}/julia-${JULIA_VERSION}"
+JULIA_TARBALL="julia-${JULIA_VERSION}-linux-x86_64.tar.gz"
+JULIA_URL="https://julialang-s3.julialang.org/bin/linux/x64/1.12/${JULIA_TARBALL}"
+
 OPENSSL_VERSION="1.1.1w"
 OPENSSL_ROOT="${TOOLS_ROOT}/openssl"
 OPENSSL_TARBALL="openssl-${OPENSSL_VERSION}.tar.gz"
@@ -141,6 +146,36 @@ else
 fi
 
 # -----------------------------
+# Julia
+# -----------------------------
+echo "[setup] Installing Julia ${JULIA_VERSION}"
+
+if [[ -x "${JULIA_ROOT}/bin/julia" ]]; then
+  echo "[setup] Julia already installed: $("${JULIA_ROOT}/bin/julia" --version)"
+else
+  cd "${SRC_ROOT}"
+
+  echo "[setup] Downloading ${JULIA_URL}"
+  wget -O "${JULIA_TARBALL}" "${JULIA_URL}"
+
+  echo "[setup] Removing old Julia root: ${JULIA_ROOT}"
+  rm -rf "${JULIA_ROOT}"
+
+  echo "[setup] Extracting Julia into ${JULIA_ROOT}"
+  mkdir -p "${JULIA_ROOT}"
+  tar -xzf "${JULIA_TARBALL}" -C "${JULIA_ROOT}" --strip-components=1
+
+  if [[ ! -x "${JULIA_ROOT}/bin/julia" ]]; then
+    echo "[setup] ERROR: Julia install failed. Expected binary not found:"
+    echo "        ${JULIA_ROOT}/bin/julia"
+    find "${JULIA_ROOT}" -maxdepth 3 -print | sort | head -100
+    exit 1
+  fi
+
+  echo "[setup] Julia installed: $("${JULIA_ROOT}/bin/julia" --version)"
+fi
+
+# -----------------------------
 # Final summary
 # -----------------------------
 echo "[setup] Final tool summary"
@@ -155,6 +190,10 @@ echo "  OpenSSL bin:  ${OPENSSL_ROOT}/bin/openssl"
 echo "  Python root:  ${PYTHON_ROOT}"
 echo "  Python bin:   ${PYTHON_ROOT}/bin/python3"
 "${PYTHON_ROOT}/bin/python3" --version
+
+echo "  Julia root:   ${JULIA_ROOT}"
+echo "  Julia bin:    ${JULIA_ROOT}/bin/julia"
+"${JULIA_ROOT}/bin/julia" --version
 
 echo
 echo "[setup] Add this to PATH when needed:"
