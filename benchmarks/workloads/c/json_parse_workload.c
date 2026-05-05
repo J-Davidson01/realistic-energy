@@ -9,6 +9,7 @@ volatile unsigned char json_parse_sink = 0; // Volatile variable to prevent comp
 
 static void uppercase_inplace(char *str) {
     if(!str) return;
+    
     while (*str) {
         *str = (char)toupper((unsigned char)*str);
         str++;

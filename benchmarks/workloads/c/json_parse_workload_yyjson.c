@@ -5,16 +5,13 @@
 #include <ctype.h>
 #include "yyjson.h"
 
-static char *uppercase_copy(const char *str) {
-    size_t len = strlen(str);
-    char *upper = (char *)malloc(len + 1);
+static void uppercase_inplace(char *str) {
+    if (!str) return;
 
-    for (size_t i = 0; i < len; i++) {
-        upper[i] = (char)toupper((unsigned char)str[i]);
+    while (*str) {
+        *str = (char)toupper((unsigned char)*str);
+        str++;
     }
-
-    upper[len] = '\0';
-    return upper;
 }
 
 int workload_json_parse_yyjson(const char *input_json, char **output_json, size_t *output_len) {
@@ -45,7 +42,9 @@ int workload_json_parse_yyjson(const char *input_json, char **output_json, size_
         yyjson_mut_set_bool(active, !active_value);
 
         const char *name_value = yyjson_mut_get_str(name);
-        char *upper = uppercase_copy(name_value);
+        char *upper = strdup(name_value);
+        uppercase_inplace(upper);
+
         size_t upper_len = strlen(upper);
 
         yyjson_mut_val *upper_val = yyjson_mut_strcpy(mut_doc, upper);
