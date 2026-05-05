@@ -413,7 +413,7 @@ def get_language_command(
     if benchmark == "pipeline_e2e_stream":
         command.extend(["--chunk-items", str(chunk_items)])
 
-    if language == "python" and benchmark == "json_parse" and variant != "default":
+    if benchmark == "json_parse" and language in ("python", "c") and variant != "default":
         command.extend(["--json-impl", variant])
 
     if verify:
@@ -466,6 +466,20 @@ def get_git_commit() -> Optional[str]:
 
     return None
 
+def get_variants_for_run(
+    language: str,
+    benchmark: str,
+    python_json_impls: List[str],
+    c_json_impls: List[str],
+) -> List[str]:
+    if benchmark == "json_parse" and language == "python":
+        return python_json_impls
+
+    if benchmark == "json_parse" and language == "c":
+        return c_json_impls
+
+    return ["default"]
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run benchmarks and collect energy and memory usage data")
     parser.add_argument("--benchmark", type=str, default="sha256,json_parse,file_copy,pipeline_e2e,pipeline_e2e_stream", help="Comma-separated benchmark names, e.g. sha256,json_parse,file_copy,pipeline")
@@ -482,6 +496,7 @@ def main() -> None:
     parser.add_argument("--max-dataset-size", type=int, default=None, help="Maximum dataset size in bytes to include")
     parser.add_argument("--chunk-items", type=int, default=1024, help="Amount of items to process in each chunk for streaming benchmarks")
     parser.add_argument("--python-json-impls", type=str, default="json", help="Comma-separated Python JSON implementations for json_parse, e.g. json,json_no_c_acc,orjson")
+    parser.add_argument("--c-json-impls", type=str, default="cjson", help="Comma-separated C JSON implementations for json_parse, e.g. cjson,yyjson")
     args = parser.parse_args()
 
     benchmarks = [b.strip() for b in args.benchmark.split(",") if b.strip()]
@@ -494,6 +509,12 @@ def main() -> None:
     python_json_impls = [
         impl.strip()
         for impl in args.python_json_impls.split(",")
+        if impl.strip()
+    ]
+
+    c_json_impls = [
+        impl.strip()
+        for impl in args.c_json_impls.split(",")
         if impl.strip()
     ]
 
@@ -548,16 +569,18 @@ def main() -> None:
             args.min_dataset_size,
             args.max_dataset_size,
         )
-        
+
         if not dataset_dirs:
             print(f"No datasets found for benchmark {benchmark} in {datasets_root}. Skipping.")
             continue
 
         for language in languages:
-            if language == "python" and benchmark == "json_parse":
-                variants = python_json_impls
-            else:
-                variants = ["default"]
+            variants = get_variants_for_run(
+                language,
+                benchmark,
+                python_json_impls,
+                c_json_impls,
+            )
 
             for variant in variants:
                 if args.verify:
@@ -566,13 +589,24 @@ def main() -> None:
                         f"Running verification for {language} on {benchmark} "
                         f"variant {variant} dataset {verify_dataset.name}..."
                     )
-                    if not run_verify(language, benchmark, verify_dataset, args.chunk_items, variant):
+
+                    if not run_verify(
+                        language,
+                        benchmark,
+                        verify_dataset,
+                        args.chunk_items,
+                        variant,
+                    ):
                         print(
                             f"Verification failed for {language} variant {variant}. "
                             "Skipping benchmark runs for this variant."
                         )
                         continue
-                    print(f"Verification succeeded for {language} variant {variant}. Proceeding with benchmark runs.")
+
+                    print(
+                        f"Verification succeeded for {language} variant {variant}. "
+                        "Proceeding with benchmark runs."
+                    )
 
                 for dataset_dir in dataset_dirs:
                     if args.warmup:
@@ -585,12 +619,14 @@ def main() -> None:
                             variant,
                             verify=False,
                         )
+
                         subprocess.run(
                             warmup_command,
                             stdout=subprocess.DEVNULL,
                             stderr=subprocess.DEVNULL,
                             check=False,
                         )
+
                         cleanup_benchmark_outputs(benchmark, dataset_dir)
 
                     for repetition in range(args.repetitions):
@@ -610,36 +646,42 @@ def main() -> None:
                             memory_interval_s=memory_interval_s,
                             rapl_zones=rapl_zones,
                         )
+
                         row["repetition"] = repetition
                         append_csv_row(csv_path, row)
 
-                    status = "success" if row["returncode"] == 0 else f"failed (return code {row['returncode']})"
-                    energy_parts = []
+                        status = (
+                            "success"
+                            if row["returncode"] == 0
+                            else f"failed (return code {row['returncode']})"
+                        )
 
-                    if row["energy_pkg_j"] not in (None, ""):
-                        energy_parts.append(f"pkg={row['energy_pkg_j']:.6f}J")
+                        energy_parts = []
 
-                    if row["energy_core_j"] not in (None, "") and row["energy_core_j"] != 0:
-                        energy_parts.append(f"core={row['energy_core_j']:.6f}J")
+                        if row["energy_pkg_j"] not in (None, ""):
+                            energy_parts.append(f"pkg={row['energy_pkg_j']:.6f}J")
 
-                    if row["energy_dram_j"] not in (None, "") and row["energy_dram_j"] != 0:
-                        energy_parts.append(f"dram={row['energy_dram_j']:.6f}J")
+                        if row["energy_core_j"] not in (None, "") and row["energy_core_j"] != 0:
+                            energy_parts.append(f"core={row['energy_core_j']:.6f}J")
 
-                    if row["energy_other_j"] not in (None, "") and row["energy_other_j"] != 0:
-                        energy_parts.append(f"other={row['energy_other_j']:.6f}J")
+                        if row["energy_dram_j"] not in (None, "") and row["energy_dram_j"] != 0:
+                            energy_parts.append(f"dram={row['energy_dram_j']:.6f}J")
 
-                    energy_str = " ".join(energy_parts)
-                    if energy_str:
-                        energy_str += " "
+                        if row["energy_other_j"] not in (None, "") and row["energy_other_j"] != 0:
+                            energy_parts.append(f"other={row['energy_other_j']:.6f}J")
 
-                    print(
-                        f" -> {status} "
-                        f"time={row['elapsed_s']:.6f}s "
-                        f"{energy_str}"
-                        f"rss_peak={row['rss_peak_bytes']} bytes"
-                    )
+                        energy_str = " ".join(energy_parts)
+                        if energy_str:
+                            energy_str += " "
 
-                    time.sleep(args.sleep_between_runs)
+                        print(
+                            f" -> {status} "
+                            f"time={row['elapsed_s']:.6f}s "
+                            f"{energy_str}"
+                            f"rss_peak={row['rss_peak_bytes']} bytes"
+                        )
+
+                        time.sleep(args.sleep_between_runs)
 
     print(f"All benchmarks completed. Results have been saved to {csv_path}")
     metadata_path = csv_path.with_name(csv_path.stem + "_metadata.json")
