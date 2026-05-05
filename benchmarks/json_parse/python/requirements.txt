@@ -1,0 +1,1 @@
+orjson==3.11.8; python_version >= "3.9"
