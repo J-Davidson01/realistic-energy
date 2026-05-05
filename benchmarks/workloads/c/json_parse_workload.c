@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <cjson/cJSON.h>
+#include "cJSON.h"
 
 volatile unsigned char json_parse_sink = 0; // Volatile variable to prevent compiler optimizations
 

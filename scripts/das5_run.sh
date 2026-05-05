@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if PROJECT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null)"; then
+  :
+elif PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+  :
+else
+  PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+fi
+
 cd "$PROJECT_ROOT"
 
 BENCHMARKS="sha256,json_parse,file_copy,pipeline_e2e,pipeline_e2e_stream"
@@ -13,10 +22,17 @@ SETUP_TOOLS="0"
 RUN_BENCHMARKS="1"
 PYTHON_VENV=".venv"
 
-GO_VERSION="1.25.0"
-GO_ROOT="$HOME/.local/go"
-GO_TARBALL="go${GO_VERSION}.linux-amd64.tar.gz"
-GO_URL="https://go.dev/dl/${GO_TARBALL}"
+DATASETS_OUT_ROOT="/var/scratch/${USER}/realistic-energy/datasets"
+RESULTS_OUT_ROOT="/var/scratch/${USER}/realistic-energy/results"
+
+TOOLS_ROOT="${HOME}/.local/realistic-energy/tools"
+GO_ROOT="${TOOLS_ROOT}/go"
+
+OPENSSL_ROOT="${TOOLS_ROOT}/openssl"
+OPENSSL_INCLUDE_DIR="${OPENSSL_ROOT}/include"
+OPENSSL_CRYPTO_LIBRARY="${OPENSSL_ROOT}/lib/libcrypto.a"
+
+GO_ROOT="${TOOLS_ROOT}/go"
 
 JULIA_MODULE="julia/1.11.4"
 CMAKE_MODULE="cmake/3.24.2"
@@ -37,6 +53,8 @@ Setup options:
   --julia-module MODULE   Julia module to load
   --cmake-module MODULE   CMake module to load
   -h, --help              Show this help
+  --datasets-out-root DIR  Directory where generated datasets are stored
+  --results-out-root DIR   Directory where benchmark results are stored
 
 Everything after -- is passed to scripts/run_benchmarks.py.
 
@@ -105,6 +123,14 @@ while [[ $# -gt 0 ]]; do
       RUN_ARGS=("$@")
       break
       ;;
+    --datasets-out-root)
+      DATASETS_OUT_ROOT="$2"
+      shift 2
+      ;;
+    --results-out-root)
+      RESULTS_OUT_ROOT="$2"
+      shift 2
+      ;;
     -h|--help)
       usage
       exit 0
@@ -119,6 +145,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 mkdir -p results
+mkdir -p "$DATASETS_OUT_ROOT"
+mkdir -p "$RESULTS_OUT_ROOT"
+mkdir -p "$(dirname "$GO_ROOT")"
 
 echo "[native] Project root: $PROJECT_ROOT"
 echo "[native] Benchmarks: $BENCHMARKS"
@@ -146,29 +175,21 @@ fi
 # -----------------------------
 # 2) Optional user-local tool setup
 # -----------------------------
-mkdir -p "$HOME/.local/bin"
-
-if [[ "$SETUP_TOOLS" == "1" ]]; then
-  if ! command -v go >/dev/null 2>&1; then
-    echo "[native] Go not found. Installing Go $GO_VERSION locally to $GO_ROOT"
-
-    tmpdir="$(mktemp -d)"
-    wget -q "$GO_URL" -O "$tmpdir/$GO_TARBALL"
-
-    rm -rf "$GO_ROOT"
-    mkdir -p "$HOME/.local"
-    tar -xzf "$tmpdir/$GO_TARBALL" -C "$HOME/.local"
-
-    rm -rf "$tmpdir"
-
-    echo "[native] Go installed locally."
-  else
-    echo "[native] Go already available: $(go version)"
-  fi
+if [[ -x "$GO_ROOT/bin/go" ]]; then
+  export PATH="$GO_ROOT/bin:$PATH"
+else
+  echo "[native] Go not found at $GO_ROOT/bin/go"
+  echo "[native] Run first:"
+  echo "  prun -v -1 -np 1 ./scripts/das5_setup_tools.sh"
 fi
 
-if [[ -d "$GO_ROOT/bin" ]]; then
-  export PATH="$GO_ROOT/bin:$PATH"
+if [[ ! -f "$OPENSSL_INCLUDE_DIR/openssl/evp.h" || ! -f "$OPENSSL_CRYPTO_LIBRARY" ]]; then
+  echo "[native] OpenSSL scratch install not found."
+  echo "[native] Expected:"
+  echo "  $OPENSSL_INCLUDE_DIR/openssl/evp.h"
+  echo "  $OPENSSL_CRYPTO_LIBRARY"
+  echo "[native] Run first:"
+  echo "  prun -v -1 -np 1 ./scripts/das5_setup_tools.sh"
 fi
 
 # -----------------------------
@@ -212,6 +233,133 @@ else
   echo "  pkg-config: not found"
 fi
 
+
+# -----------------------------
+# 3b) Save environment / toolchain metadata
+# -----------------------------
+ENV_TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+ENV_TXT="${RESULTS_OUT_ROOT}/native_environment_${ENV_TIMESTAMP}.txt"
+
+echo "[native] Saving environment metadata to $ENV_TXT"
+
+{
+  echo "timestamp: $(date --iso-8601=seconds 2>/dev/null || date)"
+  echo "hostname: $(hostname)"
+  echo "user: $(whoami)"
+  echo "working_directory: $(pwd)"
+  echo
+
+  echo "=== Kernel / OS ==="
+  uname -a || true
+  if [[ -f /etc/os-release ]]; then
+    cat /etc/os-release
+  fi
+  echo
+
+  echo "=== CPU ==="
+  lscpu || true
+  echo
+
+  echo "=== Memory ==="
+  free -h || true
+  echo
+  swapon --show || true
+  echo
+
+  echo "=== Loaded modules ==="
+  if command -v module >/dev/null 2>&1; then
+    module list 2>&1 || true
+  else
+    echo "module command not available"
+  fi
+  echo
+
+  echo "=== Module availability snapshot ==="
+  if command -v module >/dev/null 2>&1; then
+    module --terse list 2>&1 || true
+  else
+    echo "module command not available"
+  fi
+  echo
+
+  echo "=== Toolchain versions ==="
+  command -v gcc >/dev/null 2>&1 && gcc --version | head -n 1 || echo "gcc: not found"
+  command -v g++ >/dev/null 2>&1 && g++ --version | head -n 1 || echo "g++: not found"
+  command -v cmake >/dev/null 2>&1 && cmake --version | head -n 1 || echo "cmake: not found"
+  command -v pkg-config >/dev/null 2>&1 && pkg-config --version | sed 's/^/pkg-config: /' || echo "pkg-config: not found"
+  command -v python >/dev/null 2>&1 && python --version || echo "python: not found"
+  command -v python3 >/dev/null 2>&1 && python3 --version || echo "python3: not found"
+  command -v pip >/dev/null 2>&1 && pip --version || echo "pip: not found"
+  command -v go >/dev/null 2>&1 && go version || echo "go: not found"
+  command -v julia >/dev/null 2>&1 && julia --version || echo "julia: not found"
+  command -v git >/dev/null 2>&1 && git --version || echo "git: not found"
+  echo
+
+  echo "=== Python packages ==="
+  if command -v python >/dev/null 2>&1; then
+    python -m pip freeze || true
+  fi
+  echo
+
+  echo "=== Julia environment status ==="
+  if command -v julia >/dev/null 2>&1; then
+    find benchmarks -type f -name Project.toml 2>/dev/null | while read -r proj; do
+      dir="$(dirname "$proj")"
+      echo "--- Julia project: $dir ---"
+      julia --project="$dir" -e 'using Pkg; Pkg.status()' || true
+      echo
+    done
+  else
+    echo "julia: not found"
+  fi
+  echo
+
+  echo "=== Go module info ==="
+  if command -v go >/dev/null 2>&1; then
+    go env GOVERSION GOOS GOARCH GOMOD GOPATH GOROOT || true
+    if [[ -f go.mod ]]; then
+      echo
+      echo "--- go.mod ---"
+      cat go.mod
+    fi
+    if [[ -f go.sum ]]; then
+      echo
+      echo "--- go.sum sha256 ---"
+      sha256sum go.sum || true
+    fi
+  else
+    echo "go: not found"
+  fi
+  echo
+
+  echo "=== C library versions ==="
+  if command -v pkg-config >/dev/null 2>&1; then
+    pkg-config --modversion libcjson 2>/dev/null | sed 's/^/libcjson: /' || echo "libcjson: not found via pkg-config"
+    pkg-config --modversion openssl 2>/dev/null | sed 's/^/openssl-pkgconfig: /' || echo "openssl: not found via pkg-config"
+  fi
+  command -v openssl >/dev/null 2>&1 && openssl version || echo "openssl binary: not found"
+  echo
+
+  echo "=== RAPL zones ==="
+  if [[ -d /sys/class/powercap ]]; then
+    for z in /sys/class/powercap/intel-rapl*; do
+      if [[ -f "$z/name" ]]; then
+        echo "$z"
+        echo "  name: $(cat "$z/name")"
+        [[ -f "$z/energy_uj" ]] && echo "  energy_uj: $(cat "$z/energy_uj")"
+        [[ -f "$z/max_energy_range_uj" ]] && echo "  max_energy_range_uj: $(cat "$z/max_energy_range_uj")"
+      fi
+    done
+  else
+    echo "/sys/class/powercap not found"
+  fi
+  echo
+
+  echo "=== Git revision ==="
+  git rev-parse HEAD 2>/dev/null | sed 's/^/commit: /' || true
+  git status --short 2>/dev/null || true
+} > "$ENV_TXT"
+
 # -----------------------------
 # 4) Python virtual environment
 # -----------------------------
@@ -244,22 +392,24 @@ done
 need_gen=0
 
 for b in ${BENCHMARKS//,/ }; do
-  if [[ ! -d "datasets/$b" ]]; then
+  bench_dir="$DATASETS_OUT_ROOT/$b"
+
+  if [[ ! -d "$bench_dir" ]]; then
     need_gen=1
-  elif ! find "datasets/$b" -mindepth 1 -maxdepth 1 -type d | grep -q .; then
+  elif ! find "$bench_dir" -mindepth 1 -maxdepth 1 -type d | grep -q .; then
     need_gen=1
   fi
 done
 
 if [[ "$REGEN" == "1" || "$need_gen" == "1" ]]; then
-  echo "[native] Generating datasets..."
+  echo "[native] Generating datasets in $DATASETS_OUT_ROOT..."
   python scripts/generate_inputs.py \
     --benchmarks "$BENCHMARKS" \
     --min-size "$MIN_SIZE" \
     --max-size "$MAX_SIZE" \
-    --out-root datasets
+    --out-root "$DATASETS_OUT_ROOT"
 else
-  echo "[native] Datasets already present; skipping generation."
+  echo "[native] Datasets already present in $DATASETS_OUT_ROOT; skipping generation."
 fi
 
 # -----------------------------
@@ -301,7 +451,11 @@ else
     if [[ "$REBUILD" == "1" || ! -d "$build_dir" ]]; then
       echo "  building C workload in $dir"
       mkdir -p "$build_dir"
-      cmake -S "$dir" -B "$build_dir" -DCMAKE_BUILD_TYPE=Release
+      cmake -S "$dir" -B "$build_dir" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT" \
+        -DOPENSSL_INCLUDE_DIR="$OPENSSL_INCLUDE_DIR" \
+        -DOPENSSL_CRYPTO_LIBRARY="$OPENSSL_CRYPTO_LIBRARY"
       cmake --build "$build_dir" -j"$(nproc)"
     else
       echo "  (skip) $dir already built"
@@ -372,5 +526,8 @@ echo "[native] Setup complete."
 # -----------------------------
 if [[ "$RUN_BENCHMARKS" == "1" ]]; then
   echo "[native] Running benchmarks..."
-  exec python -u scripts/run_benchmarks.py "${RUN_ARGS[@]}"
+  exec python -u scripts/run_benchmarks.py \
+    --datasets-root "$DATASETS_OUT_ROOT" \
+    --results-dir "$RESULTS_OUT_ROOT/benchmark_results.csv" \
+    "${RUN_ARGS[@]}"
 fi

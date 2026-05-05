@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import sys
+from typing import Tuple
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -17,7 +18,7 @@ DEFAULT_ITERATIONS = 1000000
 PIPELINE_BUFFER_GROWTH_FACTOR = 2
 
 
-def derive_dataset_dirs_from_selector(dataset_selector: str) -> tuple[str, str, str]:
+def derive_dataset_dirs_from_selector(dataset_selector: str) -> Tuple[str, str, str]:
     selector = Path(dataset_selector)
     size_name = selector.name
     datasets_root = selector.parent.parent

@@ -10,7 +10,7 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 from datetime import datetime
 import socket
 import platform
@@ -212,7 +212,7 @@ def discover_datasets(benchmark: str, datasets_root: Path) -> List[Path]:
     dirst.sort(key=lambda d: int(d.name))
     return dirst
 
-def format_command(template: list[str], dataset_dir: Path, iterations: int, verify: bool = False) -> list[str]:
+def format_command(template: List[str], dataset_dir: Path, iterations: int, verify: bool = False) -> List[str]:
     command = [
         part.format(dataset=str(dataset_dir), iterations=str(iterations))
         for part in template
@@ -222,7 +222,7 @@ def format_command(template: list[str], dataset_dir: Path, iterations: int, veri
     return command
 
 def run_command_capture(command: List[str]) -> subprocess.CompletedProcess:
-    return subprocess.run(command, capture_output=True, text=True)
+    return subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
 
 def run_verify(language: str, benchmark: str, dataset_dir: Path, chunk_items: int) -> bool:
     command = get_language_command(language, benchmark, dataset_dir, 1, chunk_items, verify=True)
@@ -255,7 +255,7 @@ def run_benchmark(
         command,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True,
+        universal_newlines=True,
     )
 
     proc_ps = psutil.Process(proc.pid)
@@ -347,7 +347,7 @@ def make_timestamped_results_path(path: Path) -> Path:
         return path.with_name(f"{path.stem}_{timestamp}{path.suffix}")
     return Path(f"{path}_{timestamp}")
 
-def detect_languages(benchmark: str) -> list[str]:
+def detect_languages(benchmark: str) -> List[str]:
     benchmark_root = BENCHMARKS_ROOT / benchmark
     languages = []
 
@@ -372,7 +372,7 @@ def get_language_command(
     iterations: int,
     chunk_items: int,
     verify: bool = False
-) -> list[str]:
+) -> List[str]:
     benchmark_root = BENCHMARKS_ROOT / benchmark
 
     if language == "c":
@@ -431,7 +431,7 @@ def cleanup_benchmark_outputs(benchmark: str, dataset_dir: Path) -> None:
         except FileNotFoundError:
             pass
 
-def filter_datasets_by_size(dataset_dirs: List[Path], min_size: int | None, max_size: int | None) -> List[Path]:
+def filter_datasets_by_size(dataset_dirs: List[Path], min_size: Optional[int], max_size: Optional[int]) -> List[Path]:
     filtered = []
     for d in dataset_dirs:
         size = int(d.name)
@@ -441,6 +441,23 @@ def filter_datasets_by_size(dataset_dirs: List[Path], min_size: int | None, max_
             continue
         filtered.append(d)
     return filtered
+
+def get_git_commit() -> Optional[str]:
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(PROJECT_ROOT),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            check=False,
+        )
+        if completed.returncode == 0:
+            return completed.stdout.strip()
+    except OSError:
+        pass
+
+    return None
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run benchmarks and collect energy and memory usage data")
@@ -482,6 +499,7 @@ def main() -> None:
         "hostname": socket.gethostname(),
         "platform": platform.platform(),
         "processor": platform.processor(),
+        "python_version": sys.version,
         "rapl_available": bool(rapl_zones),
         "rapl_zones": [
             {
@@ -492,6 +510,8 @@ def main() -> None:
             for zone in rapl_zones
         ],
     }
+
+    run_metadata["git_commit"] = get_git_commit()
 
     for benchmark in benchmarks:
         available_languages = detect_languages(benchmark)
