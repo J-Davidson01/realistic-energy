@@ -413,7 +413,7 @@ def get_language_command(
     if benchmark == "pipeline_e2e_stream":
         command.extend(["--chunk-items", str(chunk_items)])
 
-    if benchmark == "json_parse" and language in ("python", "c") and variant != "default":
+    if benchmark == "json_parse" and language in ("python", "c", "julia") and variant != "default":
         command.extend(["--json-impl", variant])
 
     if verify:
@@ -471,12 +471,16 @@ def get_variants_for_run(
     benchmark: str,
     python_json_impls: List[str],
     c_json_impls: List[str],
+    julia_json_impls: List[str],
 ) -> List[str]:
     if benchmark == "json_parse" and language == "python":
         return python_json_impls
 
     if benchmark == "json_parse" and language == "c":
         return c_json_impls
+
+    if benchmark == "json_parse" and language == "julia":
+        return julia_json_impls
 
     return ["default"]
 
@@ -497,6 +501,7 @@ def main() -> None:
     parser.add_argument("--chunk-items", type=int, default=1024, help="Amount of items to process in each chunk for streaming benchmarks")
     parser.add_argument("--python-json-impls", type=str, default="json", help="Comma-separated Python JSON implementations for json_parse, e.g. json,json_no_c_acc,orjson")
     parser.add_argument("--c-json-impls", type=str, default="cjson", help="Comma-separated C JSON implementations for json_parse, e.g. cjson,yyjson")
+    parser.add_argument("--julia-json-impls", type=str, default="json", help="Comma-separated Julia JSON implementations for json_parse, e.g. json,json3")
     args = parser.parse_args()
 
     benchmarks = [b.strip() for b in args.benchmark.split(",") if b.strip()]
@@ -515,6 +520,12 @@ def main() -> None:
     c_json_impls = [
         impl.strip()
         for impl in args.c_json_impls.split(",")
+        if impl.strip()
+    ]
+
+    julia_json_impls = [
+        impl.strip()
+        for impl in args.julia_json_impls.split(",")
         if impl.strip()
     ]
 
@@ -580,6 +591,7 @@ def main() -> None:
                 benchmark,
                 python_json_impls,
                 c_json_impls,
+                julia_json_impls,
             )
 
             for variant in variants:
