@@ -37,6 +37,10 @@ PYTHON_ROOT="${TOOLS_ROOT}/python-${PYTHON_VERSION}"
 PYTHON_BIN="${PYTHON_ROOT}/bin/python3"
 PYTHON_VENV=".venv-das5-py${PYTHON_VERSION}"
 
+JULIA_VERSION="1.12.5"
+JULIA_ROOT="${TOOLS_ROOT}/julia-${JULIA_VERSION}"
+JULIA_BIN="${JULIA_ROOT}/bin/julia"
+
 GO_ROOT="${TOOLS_ROOT}/go"
 
 JULIA_MODULE="julia/1.11.4"
@@ -169,9 +173,9 @@ if command -v module >/dev/null 2>&1; then
     module load "$CMAKE_MODULE" || echo "[native] Warning: failed to load $CMAKE_MODULE"
   fi
 
-  if [[ -n "$JULIA_MODULE" ]]; then
-    echo "[native] Loading Julia module: $JULIA_MODULE"
-    module load "$JULIA_MODULE" || echo "[native] Warning: failed to load $JULIA_MODULE"
+  if [[ ! -x "$JULIA_BIN" && -n "$JULIA_MODULE" ]]; then
+  echo "[native] Local Julia not found; loading Julia module: $JULIA_MODULE"
+  module load "$JULIA_MODULE" || echo "[native] Warning: failed to load $JULIA_MODULE"
   fi
 else
   echo "[native] Environment modules command not found. Continuing with existing PATH."
@@ -201,6 +205,16 @@ if [[ -x "$PYTHON_BIN" ]]; then
   echo "[native] Using local Python: $PYTHON_BIN"
 else
   echo "[native] Python not found at $PYTHON_BIN"
+  echo "[native] Run first:"
+  echo "  prun -v -1 -np 1 ./scripts/das5_setup_tools.sh"
+  exit 1
+fi
+
+if [[ -x "$JULIA_BIN" ]]; then
+  export PATH="$JULIA_ROOT/bin:$PATH"
+  echo "[native] Using local Julia: $JULIA_BIN"
+else
+  echo "[native] Julia not found at $JULIA_BIN"
   echo "[native] Run first:"
   echo "  prun -v -1 -np 1 ./scripts/das5_setup_tools.sh"
   exit 1
@@ -236,7 +250,7 @@ else
 fi
 
 if command -v julia >/dev/null 2>&1; then
-  echo "  julia:  $(julia --version)"
+  echo "  julia:  $("$JULIA_BIN" --version)"
 else
   echo "  julia:  not found"
 fi
@@ -305,7 +319,7 @@ echo "[native] Saving environment metadata to $ENV_TXT"
   command -v python3 >/dev/null 2>&1 && "$PYTHON_BIN" --version || echo "python3: not found"
   command -v pip >/dev/null 2>&1 && pip --version || echo "pip: not found"
   command -v go >/dev/null 2>&1 && go version || echo "go: not found"
-  command -v julia >/dev/null 2>&1 && julia --version || echo "julia: not found"
+  [[ -x "$JULIA_BIN" ]] && "$JULIA_BIN" --version || echo "julia: not found"
   command -v git >/dev/null 2>&1 && git --version || echo "git: not found"
   echo
 
@@ -316,11 +330,11 @@ echo "[native] Saving environment metadata to $ENV_TXT"
   echo
 
   echo "=== Julia environment status ==="
-  if command -v julia >/dev/null 2>&1; then
+  if [[ -x "$JULIA_BIN" ]]; then
     find benchmarks -type f -name Project.toml 2>/dev/null | while read -r proj; do
       dir="$(dirname "$proj")"
       echo "--- Julia project: $dir ---"
-      julia --project="$dir" -e 'using Pkg; Pkg.status()' || true
+      "$JULIA_BIN" --project="$dir" -e 'using Pkg; Pkg.status()' || true
       echo
     done
   else
@@ -383,7 +397,6 @@ if [[ ! -d "$PYTHON_VENV" ]]; then
   "$PYTHON_BIN" -m venv "$PYTHON_VENV"
 fi
 
-# shellcheck disable=SC1091
 source "$PYTHON_VENV/bin/activate"
 
 python -m pip install --upgrade pip wheel setuptools
@@ -429,13 +442,13 @@ fi
 # -----------------------------
 # 6) Instantiate Julia projects
 # -----------------------------
-if command -v julia >/dev/null 2>&1; then
+if [[ -x "$JULIA_BIN" ]]; then
   echo "[native] Instantiating Julia environments..."
 
   find benchmarks -type f -name Project.toml 2>/dev/null | while read -r proj; do
     dir="$(dirname "$proj")"
     echo "  julia --project=$dir -e 'using Pkg; Pkg.instantiate()'"
-    julia --project="$dir" -e 'using Pkg; Pkg.instantiate()'
+    "$JULIA_BIN" --project="$dir" -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
   done
 else
   echo "[native] Julia not found; skipping Julia environment setup."
