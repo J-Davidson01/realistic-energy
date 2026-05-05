@@ -211,6 +211,7 @@ else
 fi
 
 if [[ -x "$JULIA_BIN" ]]; then
+  export PATH="$JULIA_ROOT/bin:$PATH"
   echo "[native] Using local Julia: $JULIA_BIN"
 else
   echo "[native] Julia not found at $JULIA_BIN"
