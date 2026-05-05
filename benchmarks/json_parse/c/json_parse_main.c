@@ -7,6 +7,12 @@
 #include <ctype.h>
 #include "cJSON.h"
 
+typedef int (*json_parse_workload_fn)(
+    const char *input_json,
+    char **output_json,
+    size_t *output_len
+);
+
 static unsigned char* read_file(const char* path, size_t *out_len) {
         FILE *file = fopen(path, "rb");
         if (!file) {
@@ -134,7 +140,20 @@ int verify_json_parse_output(const char *output_json) {
 
     cJSON_Delete(root);
     return 1;
+}
 
+static json_parse_workload_fn select_json_parse_impl(const char *impl_name) {
+    if (strcmp(impl_name, "cjson") == 0) {
+        return workload_json_parse;
+    }
+
+    if (strcmp(impl_name, "yyjson") == 0) {
+        return workload_json_parse_yyjson;
+    }
+
+    fprintf(stderr, "Unknown --json-impl: %s\n", impl_name);
+    fprintf(stderr, "Supported values: cjson, yyjson\n");
+    return NULL;
 }
 
 int main(int argc, char **argv) {
@@ -151,11 +170,18 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    const char *json_impl = parse_str(argc, argv, "--json-impl", "cjson");
+    json_parse_workload_fn workload = select_json_parse_impl(json_impl);
+    if (!workload) {
+        free(input_json);
+        return 1;
+    }
+
     if (has_flag(argc, argv, "--verify")) {
         char *output_json = NULL;
         size_t output_len = 0;
 
-        int ok = workload_json_parse((const char *)input_json, &output_json, &output_len);
+        int ok = workload((const char *)input_json, &output_json, &output_len);
         int verified = ok && verify_json_parse_output(output_json);
 
         if (verified) {
@@ -173,9 +199,9 @@ int main(int argc, char **argv) {
         char *output_json = NULL;
         size_t output_len = 0;
 
-        int ok = workload_json_parse((const char *)input_json, &output_json, &output_len);
+        int ok = workload((const char *)input_json, &output_json, &output_len);
         if (!ok) {
-            fprintf(stderr, "workload_json_parse failed at iteration %zu\n", i);
+            fprintf(stderr, "workload failed at iteration %zu\n", i);
             free(input_json);
             return 1;
         }
