@@ -241,10 +241,10 @@ def main():
     parser.add_argument("--min-size", type=int, default=64, help="Minimum size of the buffer (in bytes)")
     parser.add_argument("--max-size", type=int, default=1024 * 1024 * 512, help="Maximum size of the buffer (in bytes)")
     parser.add_argument("--seed", type=int, default=12345, help="Seed for random number generation")
-    parser.add_argument("--benchmarks", type=str, default="sha256,json_parse,file_copy,pipeline_e2e,pipeline_e2e_stream", help="Comma separated benchmarks")
+    parser.add_argument("--benchmarks", type=str, default="sha256,json_parse,file_copy,pipeline_e2e,pipeline_e2e_stream,json_parse_yelp", help="Comma separated benchmarks")
     parser.add_argument("--out-root", type=str, default="datasets", help="Root directory for generated inputs")
     parser.add_argument("--block-size", type=int, default=4 * 1024 * 1024, help="Block size for repeated binary data generation")
-    parser.add_argument("--yelp-business-json", type=Path, default=Path("scientific_datasets/json_parse_yelp/business.json"), help="Path to Yelp business.json JSONL file for json_parse_yelp")
+    parser.add_argument("--yelp-business-json", type=Path, default=Path("scientific_datasets/json_parse_yelp/yelp_academic_dataset_business.json"), help="Path to Yelp yelp_academic_dataset_business.json JSONL file for json_parse_yelp")
 
     args = parser.parse_args()
 
