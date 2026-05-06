@@ -258,19 +258,15 @@ int main(int argc, char **argv) {
             sha256_dataset_dir_buf, sizeof(sha256_dataset_dir_buf),
             output_dir_buf, sizeof(output_dir_buf)
         );
-
-        json_dataset_dir = json_dataset_dir_buf;
-        sha256_dataset_dir = sha256_dataset_dir_buf;
-        output_dir = output_dir_buf;
     } else {
-        json_dataset_dir = DEFAULT_JSON_DATASET_DIR;
-        sha256_dataset_dir = DEFAULT_SHA256_DATASET_DIR;
-        output_dir = DEFAULT_OUTPUT_DIR;
+        snprintf(json_dataset_dir_buf, sizeof(json_dataset_dir_buf), "%s", DEFAULT_JSON_DATASET_DIR);
+        snprintf(sha256_dataset_dir_buf, sizeof(sha256_dataset_dir_buf), "%s", DEFAULT_SHA256_DATASET_DIR);
+        snprintf(output_dir_buf, sizeof(output_dir_buf), "%s", DEFAULT_OUTPUT_DIR);
     }
 
-    json_dataset_dir = parse_str(argc, argv, "--json-dataset", json_dataset_dir);
-    sha256_dataset_dir = parse_str(argc, argv, "--sha256-dataset", sha256_dataset_dir);
-    output_dir = parse_str(argc, argv, "--output-dir", output_dir);
+    json_dataset_dir = parse_str(argc, argv, "--json-dataset", json_dataset_dir_buf);
+    sha256_dataset_dir = parse_str(argc, argv, "--sha256-dataset", sha256_dataset_dir_buf);
+    output_dir = parse_str(argc, argv, "--output-dir", output_dir_buf);
 
     size_t iterations = parse_u64(argc, argv, "--iterations", DEFAULT_ITERATIONS);
     size_t chunk_items = parse_u64(argc, argv, "--chunk-items", DEFAULT_CHUNK_ITEMS);

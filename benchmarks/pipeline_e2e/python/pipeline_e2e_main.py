@@ -52,9 +52,9 @@ def bool_to_int(v: bool) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", default=None)
-    parser.add_argument("--json-dataset", default=DEFAULT_JSON_DATASET_DIR)
-    parser.add_argument("--sha256-dataset", default=DEFAULT_SHA256_DATASET_DIR)
-    parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument("--json-dataset", default=None)
+    parser.add_argument("--sha256-dataset", default=None)
+    parser.add_argument("--output-dir", default=None)
     parser.add_argument("--iterations", type=int, default=DEFAULT_ITERATIONS)
     parser.add_argument("--verify", action="store_true")
     args = parser.parse_args()
@@ -62,8 +62,17 @@ def main() -> None:
     if args.dataset is not None:
         json_dataset_dir, sha256_dataset_dir, output_dir = derive_dataset_dirs_from_selector(args.dataset)
     else:
+        json_dataset_dir = DEFAULT_JSON_DATASET_DIR
+        sha256_dataset_dir = DEFAULT_SHA256_DATASET_DIR
+        output_dir = DEFAULT_OUTPUT_DIR
+
+    if args.json_dataset is not None:
         json_dataset_dir = args.json_dataset
+
+    if args.sha256_dataset is not None:
         sha256_dataset_dir = args.sha256_dataset
+
+    if args.output_dir is not None:
         output_dir = args.output_dir
 
     input_path = Path(json_dataset_dir) / "input.json"
