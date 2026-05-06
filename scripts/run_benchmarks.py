@@ -30,6 +30,7 @@ CSV_FIELDS = [
     "benchmark",
     "language",
     "variant",
+    "dataset_name",
     "size",
     "iterations",
     "chunk_items",
@@ -203,10 +204,10 @@ def sample_memory_until_exit(proc: psutil.Process, interval_s: float, stats: Mem
 # ======
 # Benchmark execution functions
 
-def discover_datasets(benchmark: str, datasets_root: Path) -> List[Path]:
-    base = datasets_root / benchmark
+def discover_datasets(dataset_name: str, datasets_root: Path) -> List[Path]:
+    base = datasets_root / dataset_name
     if not base.exists():
-        print(f"Dataset directory {base} does not exist. No datasets will be run for benchmark {benchmark}.")
+        print(f"Dataset directory {base} does not exist. No datasets will be run for dataset {dataset_name}.")
         return []
 
     dirst = [d for d in base.iterdir() if d.is_dir() and d.name.isdigit()]
@@ -225,8 +226,24 @@ def format_command(template: List[str], dataset_dir: Path, iterations: int, veri
 def run_command_capture(command: List[str]) -> subprocess.CompletedProcess:
     return subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
 
-def run_verify(language: str, benchmark: str, dataset_dir: Path, chunk_items: int, variant: str = "default") -> bool:
-    command = get_language_command(language, benchmark, dataset_dir, 1, chunk_items, variant, verify=True)
+def run_verify(
+    language: str,
+    benchmark: str,
+    dataset_dir: Path,
+    chunk_items: int,
+    variant: str = "default",
+    pipeline_json_dataset_name: Optional[str] = None,
+) -> bool:
+    command = get_language_command(
+        language,
+        benchmark,
+        dataset_dir,
+        1,
+        chunk_items,
+        variant,
+        verify=True,
+        pipeline_json_dataset_name=pipeline_json_dataset_name,
+    )
     completed = run_command_capture(command)
 
     cleanup_benchmark_outputs(benchmark, dataset_dir)
@@ -246,9 +263,10 @@ def run_benchmark(
     chunk_items: int,
     variant: str,
     memory_interval_s: float,
-    rapl_zones: List[RaplZone]
+    rapl_zones: List[RaplZone],
+    pipeline_json_dataset_name: Optional[str] = None,
 ) -> Dict[str, object]:
-    command = get_language_command(language, benchmark, dataset_dir, iterations, chunk_items, variant, verify=False)
+    command = get_language_command(language, benchmark, dataset_dir, iterations, chunk_items, variant, verify=False, pipeline_json_dataset_name=pipeline_json_dataset_name,)
 
     start_snapshot = snapshot_rapl(rapl_zones) if rapl_zones else {}
     t0 = time.perf_counter()
@@ -375,7 +393,8 @@ def get_language_command(
     iterations: int,
     chunk_items: int,
     variant: str = "default",
-    verify: bool = False
+    verify: bool = False,
+    pipeline_json_dataset_name: Optional[str] = None,
 ) -> List[str]:
     benchmark_root = BENCHMARKS_ROOT / benchmark
 
@@ -415,6 +434,15 @@ def get_language_command(
 
     if benchmark == "json_parse" and language in ("python", "c", "julia", "go") and variant != "default":
         command.extend(["--json-impl", variant])
+
+    if benchmark in ("pipeline_e2e", "pipeline_e2e_stream") and pipeline_json_dataset_name:
+        size_name = dataset_dir.name
+        selected_datasets_root = dataset_dir.parent.parent
+
+        command.extend([
+            "--json-dataset",
+            str(selected_datasets_root / pipeline_json_dataset_name / size_name),
+        ])
 
     if verify:
         command.append("--verify")
@@ -488,6 +516,37 @@ def get_variants_for_run(
 
     return ["default"]
 
+def parse_dataset_overrides(raw: str) -> Dict[str, str]:
+    overrides = {}
+
+    if not raw:
+        return overrides
+
+    for part in raw.split(","):
+        part = part.strip()
+        if not part:
+            continue
+
+        if "=" not in part:
+            raise ValueError(
+                f"Invalid dataset override '{part}'. "
+                "Expected format: benchmark=dataset_name"
+            )
+
+        benchmark, dataset_name = part.split("=", 1)
+        benchmark = benchmark.strip()
+        dataset_name = dataset_name.strip()
+
+        if not benchmark or not dataset_name:
+            raise ValueError(
+                f"Invalid dataset override '{part}'. "
+                "Expected format: benchmark=dataset_name"
+            )
+
+        overrides[benchmark] = dataset_name
+
+    return overrides
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run benchmarks and collect energy and memory usage data")
     parser.add_argument("--benchmark", type=str, default="sha256,json_parse,file_copy,pipeline_e2e,pipeline_e2e_stream", help="Comma-separated benchmark names, e.g. sha256,json_parse,file_copy,pipeline")
@@ -507,12 +566,15 @@ def main() -> None:
     parser.add_argument("--c-json-impls", type=str, default="cjson", help="Comma-separated C JSON implementations for json_parse, e.g. cjson,yyjson")
     parser.add_argument("--julia-json-impls", type=str, default="json", help="Comma-separated Julia JSON implementations for json_parse, e.g. json,json3")
     parser.add_argument("--go-json-impls", type=str, default="encoding_json", help="Comma-separated Go JSON implementations for json_parse, e.g. encoding_json,goccy_go_json")
+    parser.add_argument( "--dataset-overrides", type=str, default="", help="Comma-separated benchmark-to-dataset mappings. Example: json_parse=json_parse_yelp,pipeline_e2e=pipeline_e2e_yelp" )
+    parser.add_argument( "--pipeline-json-dataset", type=str, default="", help="Benchmark-to-dataset mappings. Example: json_parse_yelp to make pipeline_e2e and pipeline_e2e_stream use Yelp dataset" )
     args = parser.parse_args()
 
     benchmarks = [b.strip() for b in args.benchmark.split(",") if b.strip()]
     requested_languages = [lang.strip() for lang in args.languages.split(",") if lang.strip()]
 
     datasets_root = Path(args.datasets_root)
+    dataset_overrides = parse_dataset_overrides(args.dataset_overrides)
     csv_path = make_timestamped_results_path(Path(args.results_dir))
     memory_interval_s = args.memory_interval_ms / 1000.0
 
@@ -582,15 +644,17 @@ def main() -> None:
             print(f"No runnable languages found for benchmark {benchmark}. Skipping.")
             continue
 
-        print(f"Running benchmark: {benchmark}")
-        print(f"Running languages: {', '.join(languages)}")
-
-        dataset_dirs = discover_datasets(benchmark, datasets_root)
+        dataset_name = dataset_overrides.get(benchmark, benchmark)
+        dataset_dirs = discover_datasets(dataset_name, datasets_root)
         dataset_dirs = filter_datasets_by_size(
             dataset_dirs,
             args.min_dataset_size,
             args.max_dataset_size,
         )
+
+        print(f"Running benchmark: {benchmark}")
+        print(f"Using dataset: {dataset_name}")
+        print(f"Running languages: {', '.join(languages)}")
 
         if not dataset_dirs:
             print(f"No datasets found for benchmark {benchmark} in {datasets_root}. Skipping.")
@@ -620,6 +684,7 @@ def main() -> None:
                         verify_dataset,
                         args.chunk_items,
                         variant,
+                        pipeline_json_dataset_name=args.pipeline_json_dataset,
                     ):
                         print(
                             f"Verification failed for {language} variant {variant}. "
@@ -642,6 +707,7 @@ def main() -> None:
                             args.chunk_items,
                             variant,
                             verify=False,
+                            pipeline_json_dataset_name=args.pipeline_json_dataset,
                         )
 
                         subprocess.run(
@@ -669,9 +735,11 @@ def main() -> None:
                             variant=variant,
                             memory_interval_s=memory_interval_s,
                             rapl_zones=rapl_zones,
+                            pipeline_json_dataset_name=args.pipeline_json_dataset,
                         )
 
                         row["repetition"] = repetition
+                        row["dataset_name"] = dataset_name
                         append_csv_row(csv_path, row)
 
                         status = (

@@ -135,6 +135,89 @@ def write_json_parse(base_dir: Path, size: int, seed: int):
 
         f.write(suffix)
 
+def first_yelp_category(categories):
+    if not categories:
+        return ""
+    return categories.split(",")[0].strip()
+
+
+def make_yelp_json_item(obj: dict, index: int) -> dict:
+    return {
+        "id": index,
+        "name": obj.get("name") or "",
+        "active": obj.get("is_open") == 1,
+        "score": int(obj.get("review_count") or 0),
+        "category": first_yelp_category(obj.get("categories")),
+    }
+
+
+def load_yelp_business_items(source_path: Path):
+    items = []
+
+    with source_path.open("r", encoding="utf-8") as f:
+        for line_number, line in enumerate(f, start=1):
+            line = line.strip()
+            if not line:
+                continue
+
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"Invalid JSON on line {line_number} of {source_path}") from exc
+
+            items.append(make_yelp_json_item(obj, len(items)))
+
+    if not items:
+        raise ValueError(f"No Yelp business records found in {source_path}")
+
+    return items
+
+
+def write_json_parse_yelp(base_dir: Path, size: int, yelp_items):
+    outdir = base_dir / str(size)
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    path = outdir / "input.json"
+    prefix = b'{"items":['
+    suffix = b"]}"
+
+    with path.open("wb") as f:
+        f.write(prefix)
+
+        total_len = len(prefix) + len(suffix)
+        first = True
+        item_index = 0
+        source_index = 0
+
+        while True:
+            item = dict(yelp_items[source_index])
+            item["id"] = item_index
+
+            item_bytes = json.dumps(
+                item,
+                separators=(",", ":"),
+                ensure_ascii=True,
+            ).encode("utf-8")
+
+            extra = len(item_bytes) if first else 1 + len(item_bytes)
+
+            # Stop before exceeding the requested size.
+            if total_len + extra > size:
+                break
+
+            if not first:
+                f.write(b",")
+            f.write(item_bytes)
+
+            total_len += extra
+            first = False
+            item_index += 1
+
+            source_index += 1
+            if source_index == len(yelp_items):
+                source_index = 0
+
+        f.write(suffix)
 
 def write_file_copy(base_dir: Path, size: int, seed: int, block_size: int):
     outdir = base_dir / str(size)
@@ -156,11 +239,12 @@ def main():
     parser = argparse.ArgumentParser(description="Generate input files for the benchmarks")
     parser.add_argument("--base-dir", type=Path, default=Path("inputs"), help="Base directory for generated inputs")
     parser.add_argument("--min-size", type=int, default=64, help="Minimum size of the buffer (in bytes)")
-    parser.add_argument("--max-size", type=int, default=1024 * 1024 * 512, help="Maximum size of the buffer (in bytes)")
+    parser.add_argument("--max-size", type=int, default=1024 * 1024 * 1024, help="Maximum size of the buffer (in bytes)")
     parser.add_argument("--seed", type=int, default=12345, help="Seed for random number generation")
-    parser.add_argument("--benchmarks", type=str, default="sha256,json_parse,file_copy,pipeline_e2e,pipeline_e2e_stream", help="Comma separated benchmarks")
+    parser.add_argument("--benchmarks", type=str, default="sha256,json_parse,file_copy,pipeline_e2e,pipeline_e2e_stream,json_parse_yelp", help="Comma separated benchmarks")
     parser.add_argument("--out-root", type=str, default="datasets", help="Root directory for generated inputs")
     parser.add_argument("--block-size", type=int, default=4 * 1024 * 1024, help="Block size for repeated binary data generation")
+    parser.add_argument("--yelp-business-json", type=Path, default=Path("scientific_datasets/json_parse_yelp/yelp_academic_dataset_business.json"), help="Path to Yelp yelp_academic_dataset_business.json JSONL file for json_parse_yelp")
 
     args = parser.parse_args()
 
@@ -168,6 +252,12 @@ def main():
     if not benchmarks:
         print("No benchmarks specified. Exiting.")
         return
+    
+    yelp_items = None
+    if "json_parse_yelp" in benchmarks:
+        print(f"Loading Yelp business records from {args.yelp_business_json}")
+        yelp_items = load_yelp_business_items(args.yelp_business_json)
+        print(f"Loaded {len(yelp_items)} Yelp business records")
 
     sizes = pow2(args.min_size, args.max_size)
 
@@ -189,6 +279,9 @@ def main():
             elif bench == "json_parse":
                 write_json_parse(base_dir, size, bench_seed + size)
                 print(f"Generated JSON Parse dataset of size {size} bytes")
+            elif bench == "json_parse_yelp":
+                write_json_parse_yelp(base_dir, size, yelp_items)
+                print(f"Generated JSON Parse Yelp dataset of size {size} bytes")
             elif bench == "file_copy":
                 write_file_copy(base_dir, size, bench_seed + size, args.block_size)
                 print(f"Generated File Copy dataset of size {size} bytes")

@@ -14,9 +14,9 @@ const PIPELINE_BUFFER_GROWTH_FACTOR = 2
 
 function parse_args(args)
     dataset_selector = nothing
-    json_dataset_dir = DEFAULT_JSON_DATASET_DIR
-    sha256_dataset_dir = DEFAULT_SHA256_DATASET_DIR
-    output_dir = DEFAULT_OUTPUT_DIR
+    json_dataset_override = nothing
+    sha256_dataset_override = nothing
+    output_dir_override = nothing
     iterations = DEFAULT_ITERATIONS
     chunk_items = DEFAULT_CHUNK_ITEMS
     verify = false
@@ -27,13 +27,13 @@ function parse_args(args)
             dataset_selector = args[i + 1]
             i += 2
         elseif args[i] == "--json-dataset"
-            json_dataset_dir = args[i + 1]
+            json_dataset_override = args[i + 1]
             i += 2
         elseif args[i] == "--sha256-dataset"
-            sha256_dataset_dir = args[i + 1]
+            sha256_dataset_override = args[i + 1]
             i += 2
         elseif args[i] == "--output-dir"
-            output_dir = args[i + 1]
+            output_dir_override = args[i + 1]
             i += 2
         elseif args[i] == "--iterations"
             iterations = parse(Int, args[i + 1])
@@ -49,7 +49,13 @@ function parse_args(args)
         end
     end
 
-    return dataset_selector, json_dataset_dir, sha256_dataset_dir, output_dir, iterations, chunk_items, verify
+    return dataset_selector,
+           json_dataset_override,
+           sha256_dataset_override,
+           output_dir_override,
+           iterations,
+           chunk_items,
+           verify
 end
 
 function derive_dataset_dirs_from_selector(dataset_selector::String)
@@ -123,12 +129,33 @@ function file_equals_streamed_chunks(path::String, chunks::Vector{String})
 end
 
 function main()
-    dataset_selector, json_dataset_dir, sha256_dataset_dir, output_dir, iterations, chunk_items, verify =
-        parse_args(ARGS)
+    dataset_selector,
+    json_dataset_override,
+    sha256_dataset_override,
+    output_dir_override,
+    iterations,
+    chunk_items,
+    verify = parse_args(ARGS)
 
     if dataset_selector !== nothing
         json_dataset_dir, sha256_dataset_dir, output_dir =
             derive_dataset_dirs_from_selector(dataset_selector)
+    else
+        json_dataset_dir = DEFAULT_JSON_DATASET_DIR
+        sha256_dataset_dir = DEFAULT_SHA256_DATASET_DIR
+        output_dir = DEFAULT_OUTPUT_DIR
+    end
+
+    if json_dataset_override !== nothing
+        json_dataset_dir = json_dataset_override
+    end
+
+    if sha256_dataset_override !== nothing
+        sha256_dataset_dir = sha256_dataset_override
+    end
+
+    if output_dir_override !== nothing
+        output_dir = output_dir_override
     end
 
     input_path = joinpath(json_dataset_dir, "input.json")
