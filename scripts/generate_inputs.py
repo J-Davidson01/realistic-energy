@@ -239,7 +239,7 @@ def main():
     parser = argparse.ArgumentParser(description="Generate input files for the benchmarks")
     parser.add_argument("--base-dir", type=Path, default=Path("inputs"), help="Base directory for generated inputs")
     parser.add_argument("--min-size", type=int, default=64, help="Minimum size of the buffer (in bytes)")
-    parser.add_argument("--max-size", type=int, default=1024 * 1024 * 512, help="Maximum size of the buffer (in bytes)")
+    parser.add_argument("--max-size", type=int, default=1024 * 1024 * 1024, help="Maximum size of the buffer (in bytes)")
     parser.add_argument("--seed", type=int, default=12345, help="Seed for random number generation")
     parser.add_argument("--benchmarks", type=str, default="sha256,json_parse,file_copy,pipeline_e2e,pipeline_e2e_stream,json_parse_yelp", help="Comma separated benchmarks")
     parser.add_argument("--out-root", type=str, default="datasets", help="Root directory for generated inputs")
@@ -280,7 +280,7 @@ def main():
                 write_json_parse(base_dir, size, bench_seed + size)
                 print(f"Generated JSON Parse dataset of size {size} bytes")
             elif bench == "json_parse_yelp":
-                write_json_parse_yelp(base_dir, size, bench_seed + size, yelp_items)
+                write_json_parse_yelp(base_dir, size, yelp_items)
                 print(f"Generated JSON Parse Yelp dataset of size {size} bytes")
             elif bench == "file_copy":
                 write_file_copy(base_dir, size, bench_seed + size, args.block_size)
