@@ -4,6 +4,6 @@
 # Docker related files
 Dockerfile* text eol=lf
 docker/*.sh text eol=lf
-
 # Python scripts
 *.py text eol=lf
+scientific_datasets/json_parse_yelp/yelp_academic_dataset_business.json filter=lfs diff=lfs merge=lfs -text
