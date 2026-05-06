@@ -547,6 +547,56 @@ def parse_dataset_overrides(raw: str) -> Dict[str, str]:
 
     return overrides
 
+def run_analysis_script(
+    benchmark_csv_path: Path,
+    output_dir: Optional[Path],
+    workload_weights: str,
+    metric_weights: str,
+) -> None:
+    analysis_script = PROJECT_ROOT / "scripts" / "analyze_results.py"
+
+    if not analysis_script.exists():
+        print(f"Analysis script not found: {analysis_script}")
+        return
+
+    if output_dir is None:
+        output_dir = RESULTS_DIR / f"analysis_{benchmark_csv_path.stem}"
+
+    command = [
+        sys.executable,
+        str(analysis_script),
+        "--input",
+        str(benchmark_csv_path),
+        "--output-dir",
+        str(output_dir),
+        "--workload-weights",
+        workload_weights,
+        "--metric-weights",
+        metric_weights,
+    ]
+
+    print("Running analysis:")
+    print(" ".join(shlex.quote(part) for part in command))
+
+    completed = subprocess.run(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+        check=False,
+    )
+
+    if completed.stdout.strip():
+        print(completed.stdout.strip())
+
+    if completed.stderr.strip():
+        print(completed.stderr.strip())
+
+    if completed.returncode != 0:
+        print(f"Analysis failed with return code {completed.returncode}")
+    else:
+        print(f"Analysis completed. Results written to {output_dir}")
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run benchmarks and collect energy and memory usage data")
     parser.add_argument("--benchmark", type=str, default="sha256,json_parse,file_copy,pipeline_e2e,pipeline_e2e_stream", help="Comma-separated benchmark names, e.g. sha256,json_parse,file_copy,pipeline")
@@ -568,6 +618,10 @@ def main() -> None:
     parser.add_argument("--go-json-impls", type=str, default="encoding_json", help="Comma-separated Go JSON implementations for json_parse, e.g. encoding_json,goccy_go_json")
     parser.add_argument( "--dataset-overrides", type=str, default="", help="Comma-separated benchmark-to-dataset mappings. Example: json_parse=json_parse_yelp,pipeline_e2e=pipeline_e2e_yelp" )
     parser.add_argument( "--pipeline-json-dataset", type=str, default="", help="Benchmark-to-dataset mappings. Example: json_parse_yelp to make pipeline_e2e and pipeline_e2e_stream use Yelp dataset" )
+    parser.add_argument( "--analyze", action="store_true", help="Run scripts/analyze_results.py after benchmark execution finishes", ) 
+    parser.add_argument( "--analysis-output-dir", type=Path, default=None, help="Directory for analysis CSV outputs. Defaults to results/analysis_<benchmark_csv_stem>", ) 
+    parser.add_argument( "--analysis-workload-weights", type=str, default="sha256=1,json_parse=1,file_copy=1,pipeline_e2e=1,pipeline_e2e_stream=1", help="Workload weights passed to analyze_results.py", ) 
+    parser.add_argument( "--analysis-metric-weights", type=str, default="pkg=0.5,dram=0.5,time=0,memory=0", help="Metric weights passed to analyze_results.py", )
     args = parser.parse_args()
 
     benchmarks = [b.strip() for b in args.benchmark.split(",") if b.strip()]
@@ -779,6 +833,14 @@ def main() -> None:
     metadata_path = csv_path.with_name(csv_path.stem + "_metadata.json")
     with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(run_metadata, f, indent=2)
+
+    if args.analyze:
+        run_analysis_script(
+            benchmark_csv_path=csv_path,
+            output_dir=args.analysis_output_dir,
+            workload_weights=args.analysis_workload_weights,
+            metric_weights=args.analysis_metric_weights,
+        )
     
 if __name__ == "__main__":
     main()
