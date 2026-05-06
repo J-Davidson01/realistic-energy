@@ -437,9 +437,11 @@ def get_language_command(
 
     if benchmark in ("pipeline_e2e", "pipeline_e2e_stream") and pipeline_json_dataset_name:
         size_name = dataset_dir.name
+        selected_datasets_root = dataset_dir.parent.parent
+
         command.extend([
             "--json-dataset",
-            str(DATASETS_ROOT / pipeline_json_dataset_name / size_name),
+            str(selected_datasets_root / pipeline_json_dataset_name / size_name),
         ])
 
     if verify:
@@ -565,7 +567,7 @@ def main() -> None:
     parser.add_argument("--julia-json-impls", type=str, default="json", help="Comma-separated Julia JSON implementations for json_parse, e.g. json,json3")
     parser.add_argument("--go-json-impls", type=str, default="encoding_json", help="Comma-separated Go JSON implementations for json_parse, e.g. encoding_json,goccy_go_json")
     parser.add_argument( "--dataset-overrides", type=str, default="", help="Comma-separated benchmark-to-dataset mappings. Example: json_parse=json_parse_yelp,pipeline_e2e=pipeline_e2e_yelp" )
-    parser.add_argument( "--pipeline-json-dataset", type=str, default="json_parse_yelp", help="Benchmark-to-dataset mappings. Example: json_parse_yelp to make pipeline_e2e and pipeline_e2e_stream use Yelp dataset" )
+    parser.add_argument( "--pipeline-json-dataset", type=str, default="", help="Benchmark-to-dataset mappings. Example: json_parse_yelp to make pipeline_e2e and pipeline_e2e_stream use Yelp dataset" )
     args = parser.parse_args()
 
     benchmarks = [b.strip() for b in args.benchmark.split(",") if b.strip()]

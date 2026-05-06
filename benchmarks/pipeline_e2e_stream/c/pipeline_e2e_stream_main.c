@@ -144,10 +144,33 @@ static pipeline_chunk_t *build_json_chunks(
     size_t *out_chunk_count,
     size_t *out_max_chunk_input_len
 ) {
+    *out_chunk_count = 0;
+    *out_max_chunk_input_len = 0;
+
+    if (!input_json) {
+        return NULL;
+    }
+
     cJSON *root = cJSON_Parse(input_json);
+    if (!root) {
+        fprintf(stderr, "cJSON_Parse failed in build_json_chunks\n");
+        return NULL;
+    }
+
     cJSON *items = cJSON_GetObjectItemCaseSensitive(root, "items");
+    if (!cJSON_IsArray(items)) {
+        fprintf(stderr, "JSON root does not contain items array\n");
+        cJSON_Delete(root);
+        return NULL;
+    }
 
     int total_items = cJSON_GetArraySize(items);
+    if (total_items <= 0) {
+        fprintf(stderr, "JSON items array is empty\n");
+        cJSON_Delete(root);
+        return NULL;
+    }
+
     size_t chunk_count = (size_t)((total_items + (int)chunk_items - 1) / (int)chunk_items);
 
     pipeline_chunk_t *chunks = (pipeline_chunk_t *)calloc(chunk_count, sizeof(pipeline_chunk_t));
