@@ -413,7 +413,7 @@ def get_language_command(
     if benchmark == "pipeline_e2e_stream":
         command.extend(["--chunk-items", str(chunk_items)])
 
-    if benchmark == "json_parse" and language in ("python", "c", "julia") and variant != "default":
+    if benchmark == "json_parse" and language in ("python", "c", "julia", "go") and variant != "default":
         command.extend(["--json-impl", variant])
 
     if verify:
@@ -472,6 +472,7 @@ def get_variants_for_run(
     python_json_impls: List[str],
     c_json_impls: List[str],
     julia_json_impls: List[str],
+    go_json_impls: List[str],
 ) -> List[str]:
     if benchmark == "json_parse" and language == "python":
         return python_json_impls
@@ -481,6 +482,9 @@ def get_variants_for_run(
 
     if benchmark == "json_parse" and language == "julia":
         return julia_json_impls
+    
+    if benchmark == "json_parse" and language == "go":
+        return go_json_impls
 
     return ["default"]
 
@@ -502,6 +506,7 @@ def main() -> None:
     parser.add_argument("--python-json-impls", type=str, default="json", help="Comma-separated Python JSON implementations for json_parse, e.g. json,json_no_c_acc,orjson")
     parser.add_argument("--c-json-impls", type=str, default="cjson", help="Comma-separated C JSON implementations for json_parse, e.g. cjson,yyjson")
     parser.add_argument("--julia-json-impls", type=str, default="json", help="Comma-separated Julia JSON implementations for json_parse, e.g. json,json3")
+    parser.add_argument("--go-json-impls", type=str, default="encoding_json", help="Comma-separated Go JSON implementations for json_parse, e.g. encoding_json,goccy_go_json")
     args = parser.parse_args()
 
     benchmarks = [b.strip() for b in args.benchmark.split(",") if b.strip()]
@@ -510,6 +515,12 @@ def main() -> None:
     datasets_root = Path(args.datasets_root)
     csv_path = make_timestamped_results_path(Path(args.results_dir))
     memory_interval_s = args.memory_interval_ms / 1000.0
+
+    go_json_impls = [
+        impl.strip()
+        for impl in args.go_json_impls.split(",")
+        if impl.strip()
+    ]
 
     python_json_impls = [
         impl.strip()
@@ -592,6 +603,7 @@ def main() -> None:
                 python_json_impls,
                 c_json_impls,
                 julia_json_impls,
+                go_json_impls,
             )
 
             for variant in variants:
