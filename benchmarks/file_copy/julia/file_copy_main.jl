@@ -1,6 +1,3 @@
-import Pkg
-Pkg.activate(@__DIR__)
-
 include("../../workloads/julia/file_copy_workload.jl")
 
 function parse_args(args)
