@@ -1,5 +1,3 @@
-import Pkg
-Pkg.activate(@__DIR__)
 using SHA
 
 include("../../workloads/julia/sha256_workload.jl")
