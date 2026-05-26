@@ -1,0 +1,80 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Realistic Energy
+message: Enjoy this citation!
+type: software
+authors:
+  - given-names: Jonathan
+    family-names: Davidson
+    affiliation: Vrije Universiteit
+repository-code: 'https://github.com/J-Davidson01/realistic-energy'
+url: 'https://github.com/J-Davidson01/realistic-energy'
+abstract: >-
+  The increasing reliance on software-driven systems
+  contributes to increased energy
+
+  consumption, placing increasing pressure on energy grids
+  and energy infrastructure.
+
+  In large-scale systems, even marginal improvements in
+  energy efficiency can translate
+
+  into substantial reductions in total energy demand. As
+  software is the anchor of these
+
+  systems, its design and implementation have a direct
+  impact on energy usage. In
+
+  particular, programming languages can significantly
+  influence the energy efficiency of
+
+  applications.
+
+  Existing studies evaluating programming language energy
+  efficiency often rely on
+
+  small synthetic microbenchmarks or isolated case studies,
+  which may not capture how
+
+  applications behave across CPU-, memory-, and I/O-bound
+  workloads and their com-
+
+  bined execution. As a result, the validity of these
+  findings remains limited and there
+
+  is no widely accepted benchmark suite that enables
+  reproducible and comparative
+
+  evaluation across such workload types.
+
+  This thesis addresses this gap by implementing and
+  evaluating a reproducible
+
+  benchmark suite composed of CPU-, memory-, and I/O-bound
+  workloads, imple-
+
+  mented across multiple programming languages, including
+  compiled, just-in-time (JIT)
+
+  compiled, and interpreted languages. The proposed
+  methodology evaluates these
+
+  workloads both in isolation and as a composed end-to-end
+  data processing pipeline,
+
+  covering CPU computation, memory access, and I/O
+  operations.
+
+  - High-level findings
+keywords:
+  - Software benchmarking
+  - Programming language execution models
+  - Runtime environments
+  - Data processing pipelines
+  - Optimization techniques
+license: Apache-2.0
+commit: 5be9ea088bcc4c20136d318b74e3f6237bca6f27
+version: '1.0'
+date-released: '2026-05-22'
