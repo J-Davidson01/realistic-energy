@@ -233,6 +233,58 @@ prun -v -1 -np 1 -t 43200 ./scripts/das5_run.sh \
 
 In this command, `das5_run.sh` rebuilds binaries and regenerates datasets before running the benchmark suite. Arguments after `--` are passed to `run_benchmarks.py`.
 
+## Docker usage
+
+The repository also contains an experimental Docker setup under `docker/`. The Docker image installs the main build and runtime dependencies, including C/C++ build tools, CMake, OpenSSL, Python, Go, and Julia. This can be useful for local development.
+
+Build the image from the repository root:
+
+```bash
+docker build -f docker/Dockerfile -t realistic-energy .
+```
+
+Run the container with the repository mounted into `/realistic-energy`:
+
+```bash
+docker run --rm -it \
+  -v "$PWD":/realistic-energy \
+  realistic-energy
+```
+
+By default, the Docker entrypoint generates missing datasets, installs benchmark dependencies, builds C and Go workloads, instantiates Julia environments, and then runs `scripts/run_benchmarks.py`.
+
+The entrypoint can be configured through environment variables:
+
+| Variable     |                                    Default | Description                              |
+| ------------ | -----------------------------------------: | ---------------------------------------- |
+| `BENCHMARKS` | `sha256,json_parse,file_copy,pipeline_e2e` | Benchmarks to generate and run           |
+| `MIN_SIZE`   |                                  `1048576` | Minimum dataset size in bytes            |
+| `MAX_SIZE`   |                               `8589934592` | Maximum dataset size in bytes            |
+| `REGEN`      |                                        `0` | Set to `1` to force dataset regeneration |
+| `REBUILD`    |                                        `0` | Set to `1` to force rebuilding workloads |
+
+Example:
+
+```bash
+docker run --rm -it \
+  -v "$PWD":/realistic-energy \
+  -e REGEN=1 \
+  -e REBUILD=1 \
+  -e BENCHMARKS=sha256,json_parse,file_copy \
+  -e MIN_SIZE=1048576 \
+  -e MAX_SIZE=1073741824 \
+  realistic-energy \
+  --benchmark sha256,json_parse,file_copy \
+  --languages c,go,python,julia \
+  --iterations 1 \
+  --repetitions 8
+```
+
+Any arguments passed after the image name are forwarded to `scripts/run_benchmarks.py`.
+
+Note that the Docker setup is intended mainly for local testing and reproducibility of the software environment. Energy measurements based on Intel RAPL require access to the host Linux powercap interface. Therefore, Docker runs may not provide CPU package or DRAM energy measurements unless the relevant host paths, such as `/sys/class/powercap`, are mounted and readable inside the container. Docker was added at the start of the project, it might not actually be fully up to date anymore, so please note that it might be outdated compared to the das5 scripts.
+
+
 ## Analyzing results
 
 After a benchmark run, aggregate and normalize the raw results:
