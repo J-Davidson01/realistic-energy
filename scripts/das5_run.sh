@@ -51,7 +51,7 @@ usage() {
 Usage: $0 [setup options] [-- benchmark options]
 
 Setup options:
-  --setup-tools           Install missing user-local tools, currently Go only
+  --setup-tools           Install missing user-local tools, e.g. Go, Python, Julia, OpenSSL
   --regen                 Regenerate datasets
   --rebuild               Rebuild C/Go binaries
   --benchmarks LIST       Benchmarks to generate/build/run
