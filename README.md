@@ -47,6 +47,27 @@ Many existing programming-language energy studies rely on isolated algorithmic b
 └── README.md
 ```
 
+Note that benchmarks/file_copy/c/... contains the orchestrator and benchmarks/workloads/c/... contains the actual workload.
+
+Perhaps a better way of visualizin this with the repository structure would have been by having the followin structure, though this might require some effort to change as this would require updating numerous paths:
+
+```text
+benchmarks/
+├── orchestrators/
+│   ├── file_copy/
+│   │   ├── c/
+│   │   ├── go/
+│   │   ├── julia/
+│   │   └── python/
+│   ├── json_parse/
+│   └── sha256/
+└── workloads/
+    ├── c/
+    ├── go/
+    ├── julia/
+    └── python/
+```
+
 ## Benchmarks
 
 | Benchmark | Workload class | Input | Main pressure |
@@ -287,7 +308,10 @@ Note that the Docker setup is intended mainly for local testing and reproducibil
 
 ## Analyzing results
 
-After a benchmark run, aggregate and normalize the raw results:
+After a benchmark run, pull the results by running the following:
+./scripts/copy_das5_results.sh --vunetid <your-vunetid> --das5id <your-das5-id>
+
+and aggregate and normalize the raw results:
 
 ```bash
 python3 scripts/analyze_results.py \
