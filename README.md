@@ -48,8 +48,7 @@ Many existing programming-language energy studies rely on isolated algorithmic b
 ```
 
 Note that benchmarks/file_copy/c/... contains the orchestrator and benchmarks/workloads/c/... contains the actual workload.
-
-Perhaps a better way of visualizin this with the repository structure would have been by having the followin structure, though this might require some effort to change as this would require updating numerous paths:
+Perhaps a better way of visualizing this with the repository structure would have been by having the following structure, though this might require some effort to change as this would require updating numerous paths:
 
 ```text
 benchmarks/

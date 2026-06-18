@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-05-12T23:50:58.093097",
+  "hostname": "node065",
+  "platform": "Linux-4.18.0-553.16.1.el8_10.x86_64-x86_64-with-glibc2.28",
+  "processor": "x86_64",
+  "python_version": "3.11.9 (main, Jul 13 2024, 23:44:43) [Clang 17.0.6 ]",
+  "rapl_available": true,
+  "rapl_zones": [
+    {
+      "key": "intel-rapl:0",
+      "domain": "package-0",
+      "path": "/sys/class/powercap/intel-rapl:0"
+    },
+    {
+      "key": "intel-rapl:0:0",
+      "domain": "dram",
+      "path": "/sys/class/powercap/intel-rapl:0:0"
+    },
+    {
+      "key": "intel-rapl:1",
+      "domain": "package-1",
+      "path": "/sys/class/powercap/intel-rapl:1"
+    },
+    {
+      "key": "intel-rapl:1:0",
+      "domain": "dram",
+      "path": "/sys/class/powercap/intel-rapl:1:0"
+    }
+  ],
+  "git_commit": "a19108899abd6cf1a07f3111e5a7097746682426"
+}
