@@ -1,0 +1,155 @@
+timestamp: 2026-05-12T23:49:44+02:00
+hostname: node065
+user: jdn439
+working_directory: /home/jdn439/realistic-energy
+
+=== Kernel / OS ===
+Linux node065 4.18.0-553.16.1.el8_10.x86_64 #1 SMP Thu Aug 8 17:47:08 UTC 2024 x86_64 x86_64 x86_64 GNU/Linux
+PLATFORM_ID="platform:el8"
+
+=== CPU ===
+Architecture:        x86_64
+CPU op-mode(s):      32-bit, 64-bit
+Byte Order:          Little Endian
+CPU(s):              32
+On-line CPU(s) list: 0-31
+Thread(s) per core:  2
+Core(s) per socket:  8
+Socket(s):           2
+NUMA node(s):        2
+Vendor ID:           GenuineIntel
+CPU family:          6
+Model:               63
+Model name:          Intel(R) Xeon(R) CPU E5-2630 v3 @ 2.40GHz
+Stepping:            2
+CPU MHz:             3200.000
+CPU max MHz:         3200.0000
+CPU min MHz:         1200.0000
+BogoMIPS:            4788.91
+Virtualization:      VT-x
+L1d cache:           32K
+L1i cache:           32K
+L2 cache:            256K
+L3 cache:            20480K
+NUMA node0 CPU(s):   0-7,16-23
+NUMA node1 CPU(s):   8-15,24-31
+Flags:               fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid dca sse4_1 sse4_2 x2apic movbe popcnt aes xsave avx f16c rdrand lahf_lm abm cpuid_fault epb invpcid_single pti intel_ppin tpr_shadow vnmi flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid cqm xsaveopt cqm_llc cqm_occup_llc dtherm ida arat pln pts
+
+=== Memory ===
+              total        used        free      shared  buff/cache   available
+Mem:           62Gi       641Mi        51Gi       3.9Gi        10Gi        57Gi
+Swap:            0B          0B          0B
+
+
+=== Loaded modules ===
+
+Currently Loaded Modules:
+  1) autotools      4) hwloc/2.7.2        7) openmpi4/4.1.6
+  2) prun/default   5) ucx/1.15.0         8) ohpc
+  3) gnu12/12.4.0   6) libfabric/1.19.0   9) cmake/3.24.2
+
+ 
+
+
+=== Module availability snapshot ===
+autotools
+prun/default
+gnu12/12.4.0
+hwloc/2.7.2
+ucx/1.15.0
+libfabric/1.19.0
+openmpi4/4.1.6
+ohpc
+cmake/3.24.2
+
+=== Toolchain versions ===
+gcc (GCC) 12.4.0
+g++ (GCC) 12.4.0
+cmake version 3.24.2
+pkg-config: 1.4.2
+python: not found
+Python 3.11.9
+pip: not found
+go version go1.25.0 linux/amd64
+julia version 1.12.5
+git version 2.43.5
+
+=== Python packages ===
+
+=== Julia environment status ===
+--- Julia project: benchmarks/json_parse/julia ---
+Status `~/realistic-energy/benchmarks/json_parse/julia/Project.toml`
+⌃ [682c06a0] JSON v1.5.0
+  [0f8b85d8] JSON3 v1.14.3
+⌃ [9b87118b] PackageCompiler v2.2.5
+Info Packages marked with ⌃ have new versions available and may be upgradable.
+
+--- Julia project: benchmarks/pipeline_e2e/julia ---
+Status `~/realistic-energy/benchmarks/pipeline_e2e/julia/Project.toml`
+⌃ [682c06a0] JSON v1.5.1
+  [ea8e919c] SHA v0.7.0
+Info Packages marked with ⌃ have new versions available and may be upgradable.
+
+--- Julia project: benchmarks/pipeline_e2e_stream/julia ---
+Status `~/realistic-energy/benchmarks/pipeline_e2e_stream/julia/Project.toml`
+⌃ [682c06a0] JSON v1.5.1
+  [ea8e919c] SHA v0.7.0
+Info Packages marked with ⌃ have new versions available and may be upgradable.
+
+--- Julia project: benchmarks/sha256/julia ---
+Status `~/realistic-energy/benchmarks/sha256/julia/Project.toml`
+  [ea8e919c] SHA v0.7.0
+
+
+=== Go module info ===
+go1.25.0
+linux
+amd64
+/home/jdn439/realistic-energy/go.mod
+/home/jdn439/go
+/home/jdn439/.local/realistic-energy/tools/go
+
+--- go.mod ---
+module realistic-energy
+
+go 1.25.0
+
+require github.com/goccy/go-json v0.10.6
+
+--- go.sum sha256 ---
+d2b7c2e61f8f2e2176fcae7054de2cf67ea18d0d6698a5ccc27d7bc862548468  go.sum
+
+=== C library versions ===
+libcjson: not found via pkg-config
+openssl: not found via pkg-config
+OpenSSL 1.1.1k  FIPS 25 Mar 2021
+
+=== RAPL zones ===
+/sys/class/powercap/intel-rapl:0
+  name: package-0
+  energy_uj: 236964764340
+  max_energy_range_uj: 262143328850
+/sys/class/powercap/intel-rapl:0:0
+  name: dram
+  energy_uj: 44411233239
+  max_energy_range_uj: 65712999613
+/sys/class/powercap/intel-rapl:1
+  name: package-1
+  energy_uj: 20874110014
+  max_energy_range_uj: 262143328850
+/sys/class/powercap/intel-rapl:1:0
+  name: dram
+  energy_uj: 5988825985
+  max_energy_range_uj: 65712999613
+
+=== Git revision ===
+commit: a19108899abd6cf1a07f3111e5a7097746682426
+ M benchmarks/file_copy/go/file_copy_go
+ M benchmarks/json_parse/go/json_parse_go
+ M benchmarks/pipeline_e2e/go/pipeline_e2e_go
+ M benchmarks/pipeline_e2e_stream/go/pipeline_e2e_stream_go
+ M go.mod
+ M go.sum
+ M scripts/das5_run.sh
+?? .PRUN_ENVIRONMENT.3389201.fs0.das5.cs.vu.nl
+?? das5_run.sh.0.3389201.fs0

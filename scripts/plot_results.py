@@ -5,10 +5,14 @@ from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
 
+import numpy as np
+from scipy.stats import linregress
+
 
 ISOLATED_WORKLOADS = ["json_parse", "sha256", "file_copy"]
 PIPELINE_WORKLOADS = ["pipeline_e2e", "pipeline_e2e_stream"]
 ALL_WORKLOADS = ISOLATED_WORKLOADS + PIPELINE_WORKLOADS
+LOG_SCALE_Y = False
 
 DEFAULT_LANG_ORDER = ["c", "go", "julia", "python"]
 
@@ -28,6 +32,15 @@ RAW_TO_NORM = {
     "median_energy_dram_j": "norm_energy_dram",
     "median_rss_peak_bytes": "norm_peak_memory",
 }
+
+plt.rcParams.update({
+    "font.size": 17,
+    "axes.titlesize": 20,
+    "axes.labelsize": 17,
+    "xtick.labelsize": 15,
+    "ytick.labelsize": 15,
+    "legend.fontsize": 15,
+})
 
 def ensure_dir(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
@@ -139,7 +152,7 @@ def plot_metric_by_workload(
         print(f"Skipping {workload} / {metric}: no rows")
         return
 
-    plt.figure(figsize=(8, 5))
+    plt.figure(figsize=(10, 6))
 
     for (language, variant), group in plot_df.groupby(["language", "variant"], sort=False):
         group = group.sort_values("size")
@@ -156,6 +169,8 @@ def plot_metric_by_workload(
     plt.xscale("log", base=2)
     plt.xlabel("Input size S (MiB)")
     plt.ylabel(ylabel)
+    if LOG_SCALE_Y:
+        plt.yscale("log")
     plt.title(title or f"{workload}: {ylabel}")
     plt.legend()
     plt.grid(True, which="both", linewidth=0.5)
@@ -165,6 +180,41 @@ def plot_metric_by_workload(
     plt.savefig(output_path.with_suffix(".png"), dpi=300)
     plt.savefig(output_path.with_suffix(".pdf"))
     plt.close()
+
+
+def plot_dram_package_correlation_all(
+    df: pd.DataFrame,
+    output_path: Path,
+) -> None:
+    plot_df = filter_baseline_variants(df)
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    for benchmark in [b for b in ALL_WORKLOADS if b in plot_df["benchmark"].unique()]:
+        bench_df = plot_df[plot_df["benchmark"] == benchmark]
+
+        ax.scatter(
+            bench_df["median_energy_pkg_j"],
+            bench_df["median_energy_dram_j"],
+            label=benchmark,
+            alpha=0.8,
+            zorder=3,
+        )
+
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlabel("CPU package energy (J)")
+    ax.set_ylabel("DRAM energy (J)")
+    ax.set_title("DRAM energy versus CPU package energy")
+    ax.legend()
+    ax.grid(True, which="both", linewidth=0.5)
+
+    fig.tight_layout()
+
+    ensure_dir(output_path.parent)
+    fig.savefig(output_path.with_suffix(".png"), dpi=300)
+    fig.savefig(output_path.with_suffix(".pdf"))
+    plt.close(fig)
 
 
 def plot_default_workload_metric_sets(df: pd.DataFrame, out_dir: Path) -> None:
@@ -250,7 +300,7 @@ def plot_normalized_heatmap(
     col_order = [w for w in ALL_WORKLOADS if w in pivot.columns]
     pivot = pivot.reindex(columns=col_order)
 
-    fig, ax = plt.subplots(figsize=(9, 4.8))
+    fig, ax = plt.subplots(figsize=(12, 6))
 
     # Lighter, thesis-friendly color map.
     image = ax.imshow(
@@ -283,7 +333,6 @@ def plot_normalized_heatmap(
                     ha="center",
                     va="center",
                     color=text_color,
-                    fontsize=9,
                 )
 
     fig.tight_layout()
@@ -294,52 +343,259 @@ def plot_normalized_heatmap(
     plt.close(fig)
 
 
+def plot_energy_runtime_correlation_all(
+    df: pd.DataFrame,
+    output_path: Path,
+) -> None:
+    plot_df = filter_baseline_variants(df)
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    for benchmark in [b for b in ALL_WORKLOADS if b in plot_df["benchmark"].unique()]:
+        bench_df = plot_df[plot_df["benchmark"] == benchmark]
+
+        ax.scatter(
+            bench_df["median_elapsed_s"],
+            bench_df["median_energy_pkg_j"],
+            label=benchmark,
+            alpha=0.8,
+            zorder=3,
+        )
+
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlabel("Runtime (s)")
+    ax.set_ylabel("CPU package energy (J)")
+    ax.set_title("Runtime versus CPU package energy")
+    ax.legend()
+    ax.grid(True, which="both", linewidth=0.5)
+
+    fig.tight_layout()
+
+    ensure_dir(output_path.parent)
+    fig.savefig(output_path.with_suffix(".png"), dpi=300)
+    fig.savefig(output_path.with_suffix(".pdf"))
+    plt.close(fig)
+
+
 def plot_isolated_vs_composed(
     df: pd.DataFrame,
     metric: str,
     ylabel: str,
     output_path: Path,
+    highlight: str = "none",  # "none" | "star" | "hatch"
 ) -> None:
     plot_df = baseline_normalized_df(df)
-
+ 
     max_sizes = plot_df.groupby("benchmark")["size"].transform("max")
     plot_df = plot_df[plot_df["size"] == max_sizes].copy()
     plot_df = plot_df[plot_df["benchmark"].isin(ALL_WORKLOADS)]
-
+ 
     workloads = [w for w in ALL_WORKLOADS if w in plot_df["benchmark"].unique()]
     languages = [l for l in DEFAULT_LANG_ORDER if l in plot_df["language"].unique()]
-
+ 
     x = range(len(workloads))
     width = 0.18
-
-    plt.figure(figsize=(10, 5))
-
-    for idx, language in enumerate(languages):
+ 
+    fig, ax = plt.subplots(figsize=(10, 6))
+ 
+    bar_records = [] 
+ 
+    for li, language in enumerate(languages):
         values = []
         for workload in workloads:
             rows = plot_df[
                 (plot_df["benchmark"] == workload) &
                 (plot_df["language"] == language)
             ]
-            if rows.empty:
-                values.append(float("nan"))
-            else:
-                values.append(rows[metric].iloc[0])
+            values.append(rows[metric].iloc[0] if not rows.empty else float("nan"))
+ 
+        positions = [pos + (li - (len(languages) - 1) / 2) * width for pos in x]
+        bars = ax.bar(positions, values, width=width, label=language)
+ 
+        for wi, (bar, val) in enumerate(zip(bars, values)):
+            bar_records.append((wi, li, val, bar))
+ 
+    for wi in range(len(workloads)):
+        group = [(li, val, bar) for (w, li, val, bar) in bar_records if w == wi and not np.isnan(val)]
+        if not group:
+            continue
+        best_li, best_val, best_bar = min(group, key=lambda t: t[1])
+ 
+        if highlight == "star":
+            ax.text(
+                best_bar.get_x() + best_bar.get_width() / 2,
+                best_val,
+                "★",
+                ha="center",
+                va="bottom",
+                fontsize=14,
+                color="black",
+            )
+ 
+        elif highlight == "hatch":
+            best_bar.set_hatch("////")
+            best_bar.set_edgecolor("black")
+            best_bar.set_linewidth(0.8)
+ 
+    ax.set_xticks(list(x))
+    ax.set_xticklabels(workloads, rotation=25, ha="right")
+    ax.set_ylabel(ylabel)
+    ax.set_title("Isolated workloads versus composed pipelines")
+    ax.legend()
+    fig.tight_layout()
+ 
+    ensure_dir(output_path.parent)
+    fig.savefig(output_path.with_suffix(".png"), dpi=300)
+    fig.savefig(output_path.with_suffix(".pdf"))
+    plt.close(fig)
 
-        positions = [pos + (idx - (len(languages) - 1) / 2) * width for pos in x]
-        plt.bar(positions, values, width=width, label=language)
+def plot_energy_runtime_correlation(
+    df: pd.DataFrame,
+    output_path: Path,
+) -> None:
+    plot_df = filter_baseline_variants(df)
+    benchmarks = [b for b in ALL_WORKLOADS if b in plot_df["benchmark"].unique()]
 
-    plt.xticks(list(x), workloads, rotation=25, ha="right")
-    plt.ylabel(ylabel)
-    plt.title("Isolated workloads versus composed pipelines")
-    plt.legend()
-    plt.tight_layout()
+    for benchmark in benchmarks:
+        bench_df = plot_df[plot_df["benchmark"] == benchmark]
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        for language in [l for l in DEFAULT_LANG_ORDER if l in bench_df["language"].unique()]:
+            lang_df = bench_df[bench_df["language"] == language].sort_values("median_elapsed_s")
+
+            scatter = ax.scatter(
+                lang_df["median_elapsed_s"],
+                lang_df["median_energy_pkg_j"],
+                label=language,
+                alpha=0.8,
+                zorder=3,
+            )
+
+            if len(lang_df) >= 2:
+                color = scatter.get_facecolor()[0]  # grab color from the scatter itself
+
+                log_x = np.log10(lang_df["median_elapsed_s"])
+                log_y = np.log10(lang_df["median_energy_pkg_j"])
+                fit = linregress(log_x, log_y)
+
+                x_range = np.linspace(log_x.min(), log_x.max(), 100)
+                y_range = fit.slope * x_range + fit.intercept
+
+                ax.plot(
+                    10 ** x_range,
+                    10 ** y_range,
+                    linewidth=1.5,
+                    linestyle="--",
+                    alpha=0.6,
+                    color=color,
+                )
+
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.set_xlabel("Runtime (s)")
+        ax.set_ylabel("CPU package energy (J)")
+        ax.set_title(f"{benchmark}: runtime vs CPU package energy")
+        ax.legend()
+        ax.grid(True, which="both", linewidth=0.5)
+
+        fig.tight_layout()
+
+        ensure_dir(output_path.parent)
+        fig.savefig(output_path.parent / f"{output_path.stem}_{benchmark}.png", dpi=300)
+        fig.savefig(output_path.parent / f"{output_path.stem}_{benchmark}.pdf")
+        plt.close(fig)
+
+
+def plot_dram_package_correlation(
+    df: pd.DataFrame,
+    output_path: Path,
+) -> None:
+    plot_df = filter_baseline_variants(df)
+    benchmarks = [b for b in ALL_WORKLOADS if b in plot_df["benchmark"].unique()]
+
+    for benchmark in benchmarks:
+        bench_df = plot_df[plot_df["benchmark"] == benchmark]
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        for language in [l for l in DEFAULT_LANG_ORDER if l in bench_df["language"].unique()]:
+            lang_df = bench_df[bench_df["language"] == language].sort_values("median_energy_pkg_j")
+
+            scatter = ax.scatter(
+                lang_df["median_energy_pkg_j"],
+                lang_df["median_energy_dram_j"],
+                label=language,
+                alpha=0.8,
+                zorder=3,
+            )
+
+            if len(lang_df) >= 2:
+                color = scatter.get_facecolor()[0]
+
+                log_x = np.log10(lang_df["median_energy_pkg_j"])
+                log_y = np.log10(lang_df["median_energy_dram_j"])
+                fit = linregress(log_x, log_y)
+
+                x_range = np.linspace(log_x.min(), log_x.max(), 100)
+                y_range = fit.slope * x_range + fit.intercept
+
+                ax.plot(
+                    10 ** x_range,
+                    10 ** y_range,
+                    linewidth=1.5,
+                    linestyle="--",
+                    alpha=0.6,
+                    color=color,
+                )
+
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.set_xlabel("CPU package energy (J)")
+        ax.set_ylabel("DRAM energy (J)")
+        ax.set_title(f"{benchmark}: DRAM energy vs CPU package energy")
+        ax.legend()
+        ax.grid(True, which="both", linewidth=0.5)
+
+        fig.tight_layout()
+
+        ensure_dir(output_path.parent)
+        fig.savefig(output_path.parent / f"{output_path.stem}_{benchmark}.png", dpi=300)
+        fig.savefig(output_path.parent / f"{output_path.stem}_{benchmark}.pdf")
+        plt.close(fig)
+
+def create_runtime_scaling_table(
+    df: pd.DataFrame,
+    output_path: Path,
+):
+    rows = []
+
+    plot_df = filter_baseline_variants(df)
+
+    for (benchmark, language), group in (
+        plot_df.groupby(["benchmark", "language"])
+    ):
+        group = group.sort_values("size")
+        group = group[group["size"] >= group["size"].median()]
+
+        x = np.log2(group["size"])
+        y = np.log2(group["median_elapsed_s"])
+
+        fit = linregress(x, y)
+
+        rows.append({
+            "benchmark": benchmark,
+            "language": language,
+            "runtime_exponent": fit.slope,
+        })
+
+    result = pd.DataFrame(rows)
 
     ensure_dir(output_path.parent)
-    plt.savefig(output_path.with_suffix(".png"), dpi=300)
-    plt.savefig(output_path.with_suffix(".pdf"))
-    plt.close()
+    result.to_csv(output_path, index=False)
 
+    print(result)
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Create thesis plots from summary_normalized.csv")
@@ -380,18 +636,52 @@ def main() -> None:
     plot_isolated_vs_composed(
         df=df,
         metric="norm_energy_pkg",
-        ylabel="Normalized CPU package energy, lower is better",
+        ylabel="Normalized CPU package energy (J)",
         output_path=out_dir / "isolated_vs_composed" / "isolated_vs_composed_norm_package_energy",
+        highlight="star",
     )
-
+ 
     plot_isolated_vs_composed(
         df=df,
         metric="norm_runtime",
-        ylabel="Normalized runtime, lower is better",
+        ylabel="Normalized runtime (s)",
         output_path=out_dir / "isolated_vs_composed" / "isolated_vs_composed_norm_runtime",
+        highlight="star",
+    )
+ 
+    plot_isolated_vs_composed(
+        df=df,
+        metric="norm_peak_memory",
+        ylabel="Normalized peak RSS (bytes)",
+        output_path=out_dir / "isolated_vs_composed" / "isolated_vs_composed_norm_peak_memory",
+        highlight="star",
+    )
+    json_df = df[df["benchmark"] == "json_parse"].copy()
+
+    plot_energy_runtime_correlation(
+        df=df,
+        output_path=out_dir / "correlations" / "energy_runtime_correlation",
     )
 
-    json_df = df[df["benchmark"] == "json_parse"].copy()
+    plot_dram_package_correlation(
+        df=df,
+        output_path=out_dir / "correlations" / "dram_package_correlation",
+    )
+
+    create_runtime_scaling_table(
+        df=df,
+        output_path=out_dir / "tables" / "runtime_scaling_exponents.csv",
+    )
+
+    plot_dram_package_correlation_all(
+    df=df,
+    output_path=out_dir / "correlations" / "dram_package_correlation",
+    )
+
+    plot_energy_runtime_correlation_all(
+    df=df,
+    output_path=out_dir / "correlations" / "energy_runtime_correlation",
+    )
 
     plot_normalized_heatmap(
         df=json_df,
